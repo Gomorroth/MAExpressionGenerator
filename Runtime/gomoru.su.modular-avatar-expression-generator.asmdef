@@ -1,0 +1,15 @@
+{
+    "name": "gomoru.su.modular-avatar-expression-generator",
+    "references": [
+        "GUID:3456780c4fb2d324ab9c633d6f1b0ddb"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
