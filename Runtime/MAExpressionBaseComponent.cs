@@ -5,6 +5,7 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
 {
     [ExecuteInEditMode]
     [DisallowMultipleComponent]
+    [DefaultExecutionOrder(-10000)]
     public abstract class MAExpressionBaseComponent : MonoBehaviour, IEditorOnly
     {
         public void Start()

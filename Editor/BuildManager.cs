@@ -56,8 +56,6 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
             var presets = GameObject.FindObjectsOfType<MAExpressionPreset>();
             MAExpressionPresetEditor.GeneratePresets(avatar, presets);
 
-            Debug.Log("adee");
-
             _isCreated = true;
             AssetDatabase.SaveAssets();
         }

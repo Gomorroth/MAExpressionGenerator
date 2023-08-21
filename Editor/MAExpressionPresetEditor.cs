@@ -1,12 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using nadena.dev.modular_avatar.core;
 using UnityEditor;
 using UnityEditor.Animations;
-using UnityEditor.Presets;
 using UnityEngine;
 using VRC.SDK3.Avatars.Components;
 using VRC.SDK3.Avatars.ScriptableObjects;
@@ -19,7 +15,9 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
         private SerializedProperty _name;
         private SerializedProperty _targets;
 
+        private static bool _optionFoldout = false;
         private static bool[] _foldOuts;
+        private static VRCExpressionsMenu _installTargetMenu;
 
         internal void OnEnable()
         {
@@ -34,7 +32,9 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
 
         public override void OnInspectorGUI()
         {
-            (target as MAExpressionPreset).RefreshTargets();
+            var component = (target as MAExpressionPreset);
+            component.RefreshTargets();
+
             serializedObject.Update();
 
             EditorGUI.BeginChangeCheck();
@@ -49,6 +49,11 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
                 serializedObject.ApplyModifiedProperties();
                 (target as MAExpressionPreset).SyncObjectState();
                 serializedObject.Update();
+            }
+
+            if (_optionFoldout = EditorGUILayout.Foldout(_optionFoldout, "Option"))
+            {
+                _installTargetMenu = EditorGUILayout.ObjectField("Install Target Menu", _installTargetMenu, typeof(VRCExpressionsMenu), true) as VRCExpressionsMenu;
             }
 
             EditorGUILayout.Separator();
@@ -99,7 +104,7 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
         {
             var fx = AssetGenerator.CreateArtifact(useModularAvatarTemporaryFolder: true);
 
-            var obj = new GameObject("MA Expression Preset");
+            var obj = new GameObject("Preset");
             obj.SetActive(false);
             obj.transform.parent = avatarObject.transform;
 
@@ -128,10 +133,7 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
                 .HideInHierarchy().AddTo(fx);
 
                 var d = state.AddStateMachineBehaviour<VRCAvatarParameterDriver>();
-                var a = preset.Targets.Select(x =>
-                {
-                    return x.Targets.Select(y => (Name: MAExpressionGeneratorEditor.GetParameterName(x.Generator.ParamterPrefix, y.Object), y.Enable));
-                }).SelectMany(x => x);
+                var a = preset.Targets.Select(x => x.Targets.Select(y => (Name: MAExpressionGeneratorEditor.GetParameterName(x.Generator.ParamterPrefix, y.Object), y.Enable))).SelectMany(x => x);
                 d.parameters.AddRange(a.Select(x => new VRC.SDKBase.VRC_AvatarParameterDriver.Parameter() { name = x.Name, type = VRC.SDKBase.VRC_AvatarParameterDriver.ChangeType.Set, value = x.Enable ? 1 : 0 }));
 
                 states[i] = state;
@@ -209,7 +211,7 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
 
             obj.GetOrAddComponent<ModularAvatarMenuInstaller>(x =>
             {
-                x.installTargetMenu = presets.Select(y => y.GetComponent<ModularAvatarMenuInstaller>()).FirstOrDefault(y => y != null)?.installTargetMenu ?? x.installTargetMenu;
+                x.installTargetMenu = _installTargetMenu;
             });
 
             obj.GetOrAddComponent<ModularAvatarMenuItem>(x =>
