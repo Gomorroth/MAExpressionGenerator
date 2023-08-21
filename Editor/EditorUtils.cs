@@ -69,7 +69,11 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
 
         public static string CombinePath(string left, string right)
         {
-            if (left.EndsWith("/"))
+            if (string.IsNullOrEmpty(left))
+            {
+                return right;
+            }
+            else if (left.EndsWith("/"))
             {
                 return $"{left}{right}";
             }

@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 using Object = UnityEngine.Object;
 
 namespace gomoru.su.ModularAvatarExpressionGenerator
@@ -21,5 +22,9 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
             }
             return false;
         }
+
+        [System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)]
+        [System.ComponentModel.Browsable(false)]
+        public static Action<MAExpressionBaseComponent> OnAwake;
     }
 }

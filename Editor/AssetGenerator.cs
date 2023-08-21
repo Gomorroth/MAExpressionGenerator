@@ -1,5 +1,8 @@
 ﻿using System.IO;
+using System.Linq;
+using System.Reflection;
 using UnityEditor;
+using UnityEditor.Animations;
 using UnityEngine;
 
 namespace gomoru.su.ModularAvatarExpressionGenerator
@@ -7,14 +10,16 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
     [InitializeOnLoad]
     internal static class AssetGenerator
     {
-        private const string EditorPrefsKey = "gomoru.su.MAExpressionGenerator.generatedPrefabGUID";
+        private const string PrefabEditorPrefsKey = "gomoru.su.MAExpressionGenerator.generatedPrefabGUID";
+        private const string ArtifactFolderEditorPrefsKey = "gomoru.su.MAExpressionGenerator.ArtifactFolderGUID";
         private const string PrefabPath = "Assets/MAExpressionGenerator/ExpressionGenerator.prefab";
+        private const string ArtifactFolderPath = "Assets/MAExpressionGenerator/Artifact";
 
         static AssetGenerator()
         {
             EditorApplication.delayCall += () =>
             {
-                var guid = EditorPrefs.GetString(EditorPrefsKey, null);
+                var guid = EditorPrefs.GetString(PrefabEditorPrefsKey, null);
                 if (string.IsNullOrEmpty(guid) || string.IsNullOrEmpty(AssetDatabase.GUIDToAssetPath(guid)))
                 {
                     var directory = Path.GetDirectoryName(PrefabPath);
@@ -27,9 +32,47 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
 
                     PrefabUtility.SaveAsPrefabAsset(prefab, PrefabPath);
                     GameObject.DestroyImmediate(prefab);
-                    EditorPrefs.SetString(EditorPrefsKey, AssetDatabase.AssetPathToGUID(PrefabPath));
+                    EditorPrefs.SetString(PrefabEditorPrefsKey, AssetDatabase.AssetPathToGUID(PrefabPath));
                 }
             };
+        }
+
+        public static AnimatorController CreateArtifact(string prefix = null, bool useModularAvatarTemporaryFolder = false)
+        {
+            var fx = new AnimatorController();
+
+            string path;
+            if (useModularAvatarTemporaryFolder)
+            {
+                path = GetGeneratedAssetsFolder();
+            }
+            else
+            {
+                var guid = EditorPrefs.GetString(ArtifactFolderEditorPrefsKey, null);
+                if (string.IsNullOrEmpty(guid) || string.IsNullOrEmpty(AssetDatabase.GUIDToAssetPath(guid)) || !AssetDatabase.IsValidFolder(AssetDatabase.GUIDToAssetPath(guid)))
+                {
+                    if (!AssetDatabase.IsValidFolder("Assets/MAExpressionGenerator"))
+                        AssetDatabase.CreateFolder("Assets", "MAExpressionGenerator");
+                    guid = AssetDatabase.CreateFolder("Assets/MAExpressionGenerator", "Artifact");
+                    EditorPrefs.SetString(ArtifactFolderEditorPrefsKey, guid);
+                }
+                path = AssetDatabase.GUIDToAssetPath(guid);
+            }
+
+
+            AssetDatabase.CreateAsset(fx, Path.Combine(path, $"{prefix}{(string.IsNullOrEmpty(prefix) ? "" : "_")}{GUID.Generate()}.controller"));
+            return fx;
+        }
+
+        private static MethodInfo _GetGeneratedAssetsFolder = typeof(nadena.dev.modular_avatar.core.editor.AvatarProcessor).Assembly.GetTypes().FirstOrDefault(x => x.Name == "Util")?.GetMethod(nameof(GetGeneratedAssetsFolder), BindingFlags.Static | BindingFlags.NonPublic);
+
+        public static string GetGeneratedAssetsFolder()
+        {
+            var method = _GetGeneratedAssetsFolder;
+            if (method != null)
+                return method.Invoke(null, null) as string;
+
+            return null;
         }
     }
 }
