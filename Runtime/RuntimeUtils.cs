@@ -1,7 +1,4 @@
-﻿using System;
-using UnityEditor;
-using UnityEditorInternal;
-using UnityEngine;
+﻿using UnityEngine;
 using Object = UnityEngine.Object;
 
 namespace gomoru.su.ModularAvatarExpressionGenerator
