@@ -1,29 +1,20 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using UnityEngine;
-using VRC.SDKBase;
 
 namespace gomoru.su.ModularAvatarExpressionGenerator
 {
-    [ExecuteInEditMode]
-    [DisallowMultipleComponent]
-    public sealed class MAExpressionGenerator : MonoBehaviour, IEditorOnly
+    public sealed class MAExpressionGenerator : MAExpressionBaseComponent
     {
         [SerializeField]
         public List<TargetObject> Targets;
 
-        public string ParamterPrefix = "Costume";
+        [SerializeField]
+        public string ParamterPrefix = null;
 
-        public void Start()
-        {
-#if UNITY_EDITOR
-            if (UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode)
-            {
-                DestroyImmediate(gameObject);
-            }
-#endif
-        }
+        [SerializeField]
+        public bool IsParameterPrefixInitialized = false;
 
         public void Update()
         {
@@ -48,22 +39,12 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
                     if (count != Targets.Count)
                         Targets.Sort((x, y) => x.Object.transform.GetSiblingIndex() - y.Object.transform.GetSiblingIndex());
                 }
-            }
-        }
 
-        [Serializable]
-        public class TargetObject
-        {
-            [SerializeField]
-            public GameObject Object;
-
-            [SerializeField]
-            public bool Enable;
-
-            public TargetObject(GameObject obj)
-            {
-                Object = obj;
-                Enable = true;
+                if (!IsParameterPrefixInitialized)
+                {
+                    ParamterPrefix = parent.name;
+                    IsParameterPrefixInitialized = true;
+                }
             }
         }
     }

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -17,13 +18,15 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
     public sealed class MAExpressionGeneratorEditor : Editor
     {
         private SerializedProperty _targets;
+        private SerializedProperty _parameterPrefix;
         private UnityEditorInternal.ReorderableList _targetsList;
 
-        private const string ArtifactFolderGUID = "1b6a353ffaf603644a08b0cd7d082757";
+        private static bool _isOptionFoldout = false;
 
         public void OnEnable()
         {
             _targets = serializedObject.FindProperty(nameof(MAExpressionGenerator.Targets));
+            _parameterPrefix = serializedObject.FindProperty(nameof(MAExpressionGenerator.ParamterPrefix));
 
             _targetsList = new UnityEditorInternal.ReorderableList(serializedObject, _targets)
             {
@@ -35,8 +38,8 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
                 drawElementCallback = (rect, index, isActive, isFocused) =>
                 {
                     var element = _targets.GetArrayElementAtIndex(index);
-                    var target = element.FindPropertyRelative(nameof(MAExpressionGenerator.TargetObject.Object));
-                    var enable = element.FindPropertyRelative(nameof(MAExpressionGenerator.TargetObject.Enable));
+                    var target = element.FindPropertyRelative(nameof(TargetObject.Object));
+                    var enable = element.FindPropertyRelative(nameof(TargetObject.Enable));
 
                     rect.height = EditorGUIUtility.singleLineHeight;
                     var rect2 = rect;
@@ -54,9 +57,16 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
 
         public override void OnInspectorGUI()
         {
+            (target as MAExpressionGenerator).RefreshTargets();
             serializedObject.Update();
             
             _targetsList.DoLayoutList();
+
+            if (_isOptionFoldout = EditorGUILayout.BeginFoldoutHeaderGroup(_isOptionFoldout, "Option"))
+            {
+                EditorGUILayout.PropertyField(_parameterPrefix);
+            }
+
             EditorGUILayout.Separator();
 
             serializedObject.ApplyModifiedProperties();
@@ -75,7 +85,7 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
 
             var obj = component.gameObject;
             var parent = obj.transform.parent.gameObject;
-            var fx = CreateArtifact();
+            var fx = AssetGenerator.CreateArtifact(prefix: $"{parent.name}_{DateTime.Now:yyyyMMdd_HHmmss}");
 
             var items = component.Targets;
 
@@ -92,7 +102,7 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
             foreach (var item in items)
             {
                 var o = item.Object;
-                var parameterName = EditorUtils.CombinePath(component.ParamterPrefix, o.transform.GetRelativePath(parent.transform, true));
+                var parameterName = GetParameterName(component.ParamterPrefix, o);// EditorUtils.CombinePath(component.ParamterPrefix, o.transform.GetRelativePath(parent.transform));
                 var smr = o.GetComponent<SkinnedMeshRenderer>();
                 if (smr != null && useBoneToggle)
                 {
@@ -111,7 +121,6 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
                 var anim = new AnimationClip() { name = $"{o.name} ONOFF" }.AddTo(fx);
 
                 var path = o.transform.GetRelativePath(o.GetRoot()?.transform);
-                Debug.Log(path);
                 anim.SetCurve(path, typeof(GameObject), "m_IsActive", AnimationCurve.Linear(0, 0, 1 / 60f, 1));
 
                 parameter.parameters.Add(new ParameterConfig() { nameOrPrefix = parameterName, syncType = ParameterSyncType.Bool, saved = true, defaultValue = o.activeInHierarchy ? 1 : 0 });
@@ -210,12 +219,16 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
                 fx.AddLayer(layer);
             }
 
+            obj.GetOrAddComponent<ModularAvatarMenuInstaller>(x =>
+            {
+
+            });
+
             obj.GetOrAddComponent<ModularAvatarMenuItem>(x =>
             {
                 x.Control.type = VRCExpressionsMenu.Control.ControlType.SubMenu;
                 x.MenuSource = SubmenuSource.MenuAsset;
                 x.Control.subMenu = menu;
-                x.Control.name = "asdewq";
             });
 
             obj.GetOrAddComponent<ModularAvatarMergeAnimator>(x =>
@@ -237,11 +250,9 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
             AssetDatabase.SaveAssets();
         }
 
-        private static AnimatorController CreateArtifact(string prefix = null)
+        internal static string GetParameterName(string prefix, GameObject obj)
         {
-            var fx = new AnimatorController();
-            AssetDatabase.CreateAsset(fx, Path.Combine(AssetDatabase.GUIDToAssetPath(ArtifactFolderGUID), $"{prefix}{(string.IsNullOrEmpty(prefix) ? "" : "_")}{GUID.Generate()}.controller"));
-            return fx;
+            return EditorUtils.CombinePath(prefix, obj.transform.GetRelativePath(obj.GetParent()?.transform));
         }
 
         private static bool IsHumanoidBone(string boneName) => HeuristicBoneMapper.NameToBoneMap.ContainsKey(HeuristicBoneMapper.NormalizeName(boneName)) || boneName.IndexOf("Breast", StringComparison.OrdinalIgnoreCase) != -1;
