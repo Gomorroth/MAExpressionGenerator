@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Linq;
+using BestHTTP.SecureProtocol.Org.BouncyCastle.Asn1.X509;
 using nadena.dev.modular_avatar.core;
 using UnityEditor;
 using UnityEditor.Animations;
 using UnityEngine;
 using VRC.SDK3.Avatars.Components;
 using VRC.SDK3.Avatars.ScriptableObjects;
+using Object = UnityEngine.Object;
 
 namespace gomoru.su.ModularAvatarExpressionGenerator
 {
@@ -14,28 +16,29 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
     {
         private SerializedProperty _name;
         private SerializedProperty _targets;
+        private SerializedProperty _installTarget;
 
         private static bool _optionFoldout = false;
         private static bool[] _foldOuts;
-        private static VRCExpressionsMenu _installTargetMenu;
+
 
         internal void OnEnable()
         {
             var gameObjects = new SerializedObject(
                 serializedObject.targetObjects.Select(o =>
-                    (UnityEngine.Object)(o as MAExpressionPreset).gameObject
+                    (Object)(o as MAExpressionPreset).gameObject
                 ).ToArray()
             );
             _name = gameObjects.FindProperty("m_Name");
             _targets = serializedObject.FindProperty(nameof(MAExpressionPreset.Targets));
+            _installTarget = serializedObject.FindProperty(nameof(MAExpressionPreset.InstallTarget));
         }
 
         public override void OnInspectorGUI()
         {
-            var component = (target as MAExpressionPreset);
-            component.RefreshTargets();
-
             serializedObject.Update();
+
+            Refresh();
 
             EditorGUI.BeginChangeCheck();
             EditorGUILayout.PropertyField(_name);
@@ -46,14 +49,21 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
 
             if (GUILayout.Button("Sync"))
             {
-                serializedObject.ApplyModifiedProperties();
-                (target as MAExpressionPreset).SyncObjectState();
-                serializedObject.Update();
+                SyncObjectState();
+            }
+
+            if (GUILayout.Button("Apply"))
+            {
+                ApplyObjectState();
             }
 
             if (_optionFoldout = EditorGUILayout.Foldout(_optionFoldout, "Option"))
             {
-                _installTargetMenu = EditorGUILayout.ObjectField("Install Target Menu", _installTargetMenu, typeof(VRCExpressionsMenu), true) as VRCExpressionsMenu;
+                var x = EditorGUILayout.ObjectField("Install Target", _installTarget.objectReferenceValue, typeof(Object), true);
+                if (x is VRCExpressionsMenu || (x is GameObject g && g.GetComponent<ModularAvatarMenuInstaller>() != null))
+                {
+                    _installTarget.objectReferenceValue = x;
+                }
             }
 
             EditorGUILayout.Separator();
@@ -66,7 +76,7 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
                 var list = x.FindPropertyRelative(nameof(MAExpressionPreset.Group.Targets));
                 var generator = x.FindPropertyRelative(nameof(MAExpressionPreset.Group.Generator)).objectReferenceValue as MAExpressionGenerator;
 
-                if (_foldOuts[i] = EditorGUILayout.BeginFoldoutHeaderGroup(_foldOuts[i], generator.name))
+                if (_foldOuts[i] = EditorGUILayout.BeginFoldoutHeaderGroup(_foldOuts[i], generator?.name))
                 {
                     new UnityEditorInternal.ReorderableList(serializedObject, list)
                     {
@@ -95,14 +105,77 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
                         },
                     }.DoLayoutList();
                 }
+                EditorGUILayout.EndFoldoutHeaderGroup();
             }
 
             serializedObject.ApplyModifiedProperties();
         }
 
+        public void Refresh()
+        {
+            var component = (target as MAExpressionPreset);
+            var obj = component.gameObject;
+            var avatar = obj.GetComponentInParent<VRCAvatarDescriptor>();
+            if (avatar != null)
+            {
+                var generators = avatar.GetComponentsInChildren<MAExpressionGenerator>();
+                if (component.Targets != null && generators.Length != component.Targets.Count)
+                {
+                    component.Targets.AddRange(generators.Where(x => !component.Targets.Any(y => x == y.Generator)).Select(x => new MAExpressionPreset.Group(x)));
+                    component.Targets.RemoveAll(x => x.Generator == null);
+                }
+                foreach (var x in component.Targets)
+                {
+                    x.Refresh();
+                }
+            }
+            serializedObject.Update();
+        }
+
+        public void SyncObjectState()
+        {
+            var count = _targets.arraySize;
+            for (int i = 0; i < count; i++)
+            {
+                var group = _targets.GetArrayElementAtIndex(i);
+                var targets = group.FindPropertyRelative(nameof(MAExpressionPreset.Group.Targets));
+                var count2 = targets.arraySize;
+                for (int i2 = 0; i2 < count2; i2++)
+                {
+                    var target = targets.GetArrayElementAtIndex(i2);
+                    var o = target.FindPropertyRelative(nameof(TargetObject.Object));
+                    var e = target.FindPropertyRelative(nameof(TargetObject.Enable));
+                    e.boolValue = (o.objectReferenceValue as GameObject).activeInHierarchy;
+                }
+            }
+        }
+
+        public void ApplyObjectState()
+        {
+            var count = _targets.arraySize;
+            for (int i = 0; i < count; i++)
+            {
+                var group = _targets.GetArrayElementAtIndex(i);
+                var targets = group.FindPropertyRelative(nameof(MAExpressionPreset.Group.Targets));
+                var count2 = targets.arraySize;
+                for (int i2 = 0; i2 < count2; i2++)
+                {
+                    var target = targets.GetArrayElementAtIndex(i2);
+                    var o = target.FindPropertyRelative(nameof(TargetObject.Object));
+                    var e = target.FindPropertyRelative(nameof(TargetObject.Enable));
+                    Undo.RecordObject(o.objectReferenceValue, "Apply Preset");
+                    (o.objectReferenceValue as GameObject).SetActive(e.boolValue);
+                }
+            }
+        }
         internal static void GeneratePresets(GameObject avatarObject, MAExpressionPreset[] presets)
         {
             var fx = AssetGenerator.CreateArtifact(useModularAvatarTemporaryFolder: true);
+
+            foreach(var p in presets )
+            {
+                Debug.Log(p.gameObject.name);
+            }
 
             var obj = new GameObject("Preset");
             obj.SetActive(false);
@@ -206,12 +279,28 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
 
             obj.GetOrAddComponent<ModularAvatarParameters>(x =>
             {
-                x.parameters.Add(new ParameterConfig() { saved = false, syncType = ParameterSyncType.NotSynced, nameOrPrefix = "Preset", localOnly = true, });
+                x.parameters.Add(new ParameterConfig() { saved = false, syncType = ParameterSyncType.Int, nameOrPrefix = "Preset", localOnly = true });
             });
 
             obj.GetOrAddComponent<ModularAvatarMenuInstaller>(x =>
             {
-                x.installTargetMenu = _installTargetMenu;
+                var t = presets.FirstOrDefault(y => y.InstallTarget != null)?.InstallTarget;
+                if (t != null)
+                {
+                    if (t is VRCExpressionsMenu menu)
+                    {
+                        x.installTargetMenu = menu;
+                    }
+                    else if (t is GameObject g)
+                    {
+                        var g2 = new GameObject();
+                        g2.transform.parent = g.transform;
+                        var type = typeof(ModularAvatarMenuInstaller).Module.GetTypes().First(y => y.Name == "ModularAvatarMenuInstallTarget");
+                        var installer = type.GetField("installer");
+                        var c = g2.AddComponent(type);
+                        installer.SetValue(c, x);
+                    }
+                }
             });
 
             obj.GetOrAddComponent<ModularAvatarMenuItem>(x =>

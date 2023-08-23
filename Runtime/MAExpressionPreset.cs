@@ -2,25 +2,33 @@
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using VRC.SDK3.Avatars.Components;
 
 namespace gomoru.su.ModularAvatarExpressionGenerator
 {
     public sealed class MAExpressionPreset : MAExpressionBaseComponent
     {
         [SerializeField]
-        public List<Group> Targets;
+        public List<Group> Targets = new List<Group>();
 
-        public void RefreshTargets()
+        [SerializeField]
+        public UnityEngine.Object InstallTarget;
+
+        public void Refresh()
         {
-            var generators = gameObject.transform.parent?.GetComponentsInChildren<MAExpressionGenerator>();
-            if (Targets != null && generators.Length != Targets.Count)
+            var avatar = gameObject.GetComponentInParent<VRCAvatarDescriptor>();
+            if (avatar != null)
             {
-                Targets.AddRange(generators.Where(x => !Targets.Any(y => x == y.Generator)).Select(x => new Group(x)));
-                Targets.RemoveAll(x => x.Generator == null);
-            }
-            foreach(var x in Targets)
-            {
-                x.Refresh();
+                var generators = avatar.GetComponentsInChildren<MAExpressionGenerator>();
+                if (Targets != null && generators.Length != Targets.Count)
+                {
+                    Targets.AddRange(generators.Where(x => !Targets.Any(y => x == y.Generator)).Select(x => new Group(x)));
+                    Targets.RemoveAll(x => x.Generator == null);
+                }
+                foreach(var x in Targets)
+                {
+                    x.Refresh();
+                }
             }
         }
 
@@ -35,6 +43,17 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
             }
         }
 
+        public void ApplyObjectState()
+        {
+            foreach (var group in Targets)
+            {
+                foreach (var x in group.Targets)
+                {
+                    x.Object.SetActive(x.Enable);
+                }
+            }
+        }
+
         [Serializable]
         public class Group
         {
@@ -42,11 +61,11 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
             public MAExpressionGenerator Generator;
 
             [SerializeField]
-            public List<TargetObject> Targets;
+            public List<TargetObject> Targets = new List<TargetObject>();
 
             public void Refresh()
             {
-                if (Generator.Targets.Count != Targets.Count)
+                if (Generator?.Targets?.Count != Targets.Count)
                 {
                     Targets.AddRange(Generator.Targets.Where(x => !Targets.Any(y => x.Object == y.Object)).Select(x => new TargetObject(x.Object, false)));
                     Targets.RemoveAll(x => !Generator.Targets.Any(y => x.Object == y.Object));

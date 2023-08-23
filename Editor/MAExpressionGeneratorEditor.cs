@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.ComponentModel;
-using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
@@ -53,13 +51,17 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
                     EditorGUI.EndDisabledGroup();
                 },
             };
+
+            Refresh();
+            serializedObject.ApplyModifiedProperties();
         }
 
         public override void OnInspectorGUI()
         {
-            (target as MAExpressionGenerator).RefreshTargets();
             serializedObject.Update();
-            
+
+            Refresh();
+
             _targetsList.DoLayoutList();
 
             if (_isOptionFoldout = EditorGUILayout.BeginFoldoutHeaderGroup(_isOptionFoldout, "Option"))
@@ -74,6 +76,33 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
             if (GUILayout.Button("Run"))
             {
                 Generate();
+            }
+        }
+
+        private void Refresh()
+        {
+            var component = (target as MAExpressionGenerator);
+            var parent = component.transform.parent;
+            if (parent != null)
+            {
+                if (_parameterPrefix.stringValue == "\u200B")
+                {
+                    _parameterPrefix.stringValue = parent.name;
+                }
+                var targets = parent.GetComponentsInChildren<SkinnedMeshRenderer>(true).Where(x => !x.IsEditorOnly());
+                var Targets = component.Targets;
+                if (Targets == null)
+                {
+                    Targets = targets.Select(x => new TargetObject(x.gameObject)).ToList();
+                }
+                else
+                {
+                    var count = Targets.Count;
+                    Targets.AddRange(targets.Where(x => !Targets.Any(y => y.Object == x.gameObject)).Select(x => new TargetObject(x.gameObject)));
+                    Targets.RemoveAll(x => x.Object == null || x.Object.IsEditorOnly() || !x.Object.IsIn(parent.gameObject));
+                    if (count != Targets.Count)
+                        Targets.Sort((x, y) => x.Object.transform.GetSiblingIndex() - y.Object.transform.GetSiblingIndex());
+                }
             }
         }
 

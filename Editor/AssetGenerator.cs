@@ -11,8 +11,10 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
     internal static class AssetGenerator
     {
         private const string PrefabEditorPrefsKey = "gomoru.su.MAExpressionGenerator.generatedPrefabGUID";
+        private const string PresetPrefabEditorPrefsKey = "gomoru.su.MAExpressionGenerator.PresetPrefabGUID";
         private const string ArtifactFolderEditorPrefsKey = "gomoru.su.MAExpressionGenerator.ArtifactFolderGUID";
         private const string PrefabPath = "Assets/MAExpressionGenerator/ExpressionGenerator.prefab";
+        private const string PresetPrefabPath = "Assets/MAExpressionGenerator/ExpressionPreset.prefab";
         private const string ArtifactFolderPath = "Assets/MAExpressionGenerator/Artifact";
 
         static AssetGenerator()
@@ -33,6 +35,22 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
                     PrefabUtility.SaveAsPrefabAsset(prefab, PrefabPath);
                     GameObject.DestroyImmediate(prefab);
                     EditorPrefs.SetString(PrefabEditorPrefsKey, AssetDatabase.AssetPathToGUID(PrefabPath));
+                }
+
+                guid = EditorPrefs.GetString(PresetPrefabEditorPrefsKey, null);
+                if (string.IsNullOrEmpty(guid) || string.IsNullOrEmpty(AssetDatabase.GUIDToAssetPath(guid)))
+                {
+                    var directory = Path.GetDirectoryName(PresetPrefabPath);
+                    if (!AssetDatabase.IsValidFolder(directory))
+                    {
+                        AssetDatabase.CreateFolder(Path.GetDirectoryName(directory), Path.GetFileName(directory));
+                    }
+                    var prefab = new GameObject(Path.GetFileNameWithoutExtension(PresetPrefabPath)) { hideFlags = HideFlags.HideInHierarchy };
+                    var generator = prefab.AddComponent<MAExpressionPreset>();
+
+                    PrefabUtility.SaveAsPrefabAsset(prefab, PresetPrefabPath);
+                    GameObject.DestroyImmediate(prefab);
+                    EditorPrefs.SetString(PresetPrefabEditorPrefsKey, AssetDatabase.AssetPathToGUID(PrefabPath));
                 }
             };
         }
