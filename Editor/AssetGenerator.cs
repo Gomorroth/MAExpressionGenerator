@@ -1,9 +1,13 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Linq;
 using System.Reflection;
+using nadena.dev.modular_avatar.core;
 using UnityEditor;
 using UnityEditor.Animations;
 using UnityEngine;
+using UnityEngine.Windows;
+using static ICSharpCode.SharpZipLib.Zip.ExtendedUnixData;
 
 namespace gomoru.su.ModularAvatarExpressionGenerator
 {
@@ -12,47 +16,59 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
     {
         private const string PrefabEditorPrefsKey = "gomoru.su.MAExpressionGenerator.generatedPrefabGUID";
         private const string PresetPrefabEditorPrefsKey = "gomoru.su.MAExpressionGenerator.PresetPrefabGUID";
+        private const string PresetManagerPrefabEditorPrefsKey = "gomoru.su.MAExpressionGenerator.ManagerPrefabGUID";
         private const string ArtifactFolderEditorPrefsKey = "gomoru.su.MAExpressionGenerator.ArtifactFolderGUID";
         private const string PrefabPath = "Assets/MAExpressionGenerator/ExpressionGenerator.prefab";
         private const string PresetPrefabPath = "Assets/MAExpressionGenerator/ExpressionPreset.prefab";
+        private const string ManagerPrefabPath = "Assets/MAExpressionGenerator/ExpressionPresetManager.prefab";
         private const string ArtifactFolderPath = "Assets/MAExpressionGenerator/Artifact";
 
         static AssetGenerator()
         {
             EditorApplication.delayCall += () =>
             {
-                var guid = EditorPrefs.GetString(PrefabEditorPrefsKey, null);
-                if (string.IsNullOrEmpty(guid) || string.IsNullOrEmpty(AssetDatabase.GUIDToAssetPath(guid)))
+                bool flag = false;
+
+                flag |= CreatePrefab(PrefabEditorPrefsKey, PrefabPath, x => x.AddComponent<MAExpressionGenerator>());
+                flag |= CreatePrefab(PresetPrefabEditorPrefsKey, PresetPrefabPath, x => x.AddComponent<MAExpressionPreset>());
+                flag |= CreatePrefab(PresetManagerPrefabEditorPrefsKey, ManagerPrefabPath, x =>
                 {
-                    var directory = Path.GetDirectoryName(PrefabPath);
-                    if (!AssetDatabase.IsValidFolder(directory))
-                    {
-                        AssetDatabase.CreateFolder(Path.GetDirectoryName(directory), Path.GetFileName(directory));
-                    }
-                    var prefab = new GameObject(Path.GetFileNameWithoutExtension(PrefabPath)) { hideFlags = HideFlags.HideInHierarchy };
-                    var generator = prefab.AddComponent<MAExpressionGenerator>();
+                    x.AddComponent<MAExpressionPresetManager>();
+                    x.AddComponent<ModularAvatarMenuInstaller>();
+                });
 
-                    PrefabUtility.SaveAsPrefabAsset(prefab, PrefabPath);
-                    GameObject.DestroyImmediate(prefab);
-                    EditorPrefs.SetString(PrefabEditorPrefsKey, AssetDatabase.AssetPathToGUID(PrefabPath));
-                }
-
-                guid = EditorPrefs.GetString(PresetPrefabEditorPrefsKey, null);
-                if (string.IsNullOrEmpty(guid) || string.IsNullOrEmpty(AssetDatabase.GUIDToAssetPath(guid)))
-                {
-                    var directory = Path.GetDirectoryName(PresetPrefabPath);
-                    if (!AssetDatabase.IsValidFolder(directory))
-                    {
-                        AssetDatabase.CreateFolder(Path.GetDirectoryName(directory), Path.GetFileName(directory));
-                    }
-                    var prefab = new GameObject(Path.GetFileNameWithoutExtension(PresetPrefabPath)) { hideFlags = HideFlags.HideInHierarchy };
-                    var generator = prefab.AddComponent<MAExpressionPreset>();
-
-                    PrefabUtility.SaveAsPrefabAsset(prefab, PresetPrefabPath);
-                    GameObject.DestroyImmediate(prefab);
-                    EditorPrefs.SetString(PresetPrefabEditorPrefsKey, AssetDatabase.AssetPathToGUID(PrefabPath));
-                }
+                if (flag)
+                    AssetDatabase.SaveAssets();
             };
+        }
+
+        private static bool CreatePrefab(string prefsKey, string path, Action<GameObject> initialization)
+        {
+            var guid = EditorPrefs.GetString(prefsKey, null);
+            if (string.IsNullOrEmpty(guid) || string.IsNullOrEmpty(AssetDatabase.GUIDToAssetPath(guid)))
+            {
+                var directory = Path.GetDirectoryName(path);
+                CreateDirectoryRecursive(directory);
+
+                var prefab = new GameObject(Path.GetFileNameWithoutExtension(path)) { hideFlags = HideFlags.HideInHierarchy };
+                initialization(prefab);
+
+                PrefabUtility.SaveAsPrefabAsset(prefab, path);
+                GameObject.DestroyImmediate(prefab);
+                EditorPrefs.SetString(prefsKey, AssetDatabase.AssetPathToGUID(path));
+                return true;
+            }
+            return false;
+        }
+
+        private static void CreateDirectoryRecursive(string path)
+        {
+            if (!AssetDatabase.IsValidFolder(path))
+            {
+                var parent = Path.GetDirectoryName(path);
+                CreateDirectoryRecursive(parent);
+                AssetDatabase.CreateFolder(parent, Path.GetFileName(path));
+            }
         }
 
         public static AnimatorController CreateArtifact(string prefix = null, bool useModularAvatarTemporaryFolder = false)

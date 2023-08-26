@@ -11,9 +11,6 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
         [SerializeField]
         public List<Group> Targets = new List<Group>();
 
-        [SerializeField]
-        public UnityEngine.Object InstallTarget;
-
         public void Refresh()
         {
             var avatar = gameObject.GetComponentInParent<VRCAvatarDescriptor>();
@@ -28,28 +25,6 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
                 foreach(var x in Targets)
                 {
                     x.Refresh();
-                }
-            }
-        }
-
-        public void SyncObjectState()
-        {
-            foreach(var group in Targets)
-            {
-                foreach(var x in group.Targets)
-                {
-                    x.Enable = x.Object.activeInHierarchy;
-                }
-            }
-        }
-
-        public void ApplyObjectState()
-        {
-            foreach (var group in Targets)
-            {
-                foreach (var x in group.Targets)
-                {
-                    x.Object.SetActive(x.Enable);
                 }
             }
         }
