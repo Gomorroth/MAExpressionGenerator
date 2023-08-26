@@ -3,7 +3,6 @@ using VRC.SDKBase;
 
 namespace gomoru.su.ModularAvatarExpressionGenerator
 {
-    [DisallowMultipleComponent]
     [DefaultExecutionOrder(-10000)]
     public abstract class MAExpressionBaseComponent : MonoBehaviour, IEditorOnly
     {

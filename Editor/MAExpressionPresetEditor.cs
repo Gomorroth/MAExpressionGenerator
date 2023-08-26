@@ -101,22 +101,24 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
         public void Refresh()
         {
             var component = (target as MAExpressionPreset);
+
             var obj = component.gameObject;
             var avatar = obj.GetComponentInParent<VRCAvatarDescriptor>();
+
             if (avatar != null)
             {
                 var generators = avatar.GetComponentsInChildren<MAExpressionGenerator>();
                 if (component.Targets != null && generators.Length != component.Targets.Count)
                 {
                     component.Targets.AddRange(generators.Where(x => !component.Targets.Any(y => x == y.Generator)).Select(x => new MAExpressionPreset.Group(x)));
-                    component.Targets.RemoveAll(x => x.Generator == null);
+                    component.Targets.RemoveAll(x => x.Generator == null || x.Targets.Any(y => y.Object.IsEditorOnly()));
                 }
                 foreach (var x in component.Targets)
                 {
                     x.Refresh();
                 }
+                EditorUtility.SetDirty(component);
             }
-            serializedObject.Update();
         }
 
         public void SyncObjectState()

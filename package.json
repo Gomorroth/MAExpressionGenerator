@@ -1,6 +1,6 @@
 {
   "name": "gomoru.su.modular-avatar-expression-generator",
-  "version": "1.0.0-alpha-5",
+  "version": "1.0.0-alpha-6",
   "displayName": "MA Expression Generator",
   "description": "Generate costume toggle animations",
   "url" : "https://github.com/Gomorroth/MAExpressionGenerator",
