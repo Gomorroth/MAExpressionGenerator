@@ -30,8 +30,6 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
         {
             serializedObject.Update();
 
-            Refresh();
-
             EditorGUI.BeginChangeCheck();
             EditorGUILayout.PropertyField(_name);
             if (EditorGUI.EndChangeCheck())
@@ -39,14 +37,22 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
                 _name.serializedObject.ApplyModifiedProperties();
             }
 
+            if ((target as MAExpressionPreset)?.GetComponentInParent<VRCAvatarDescriptor>() == null)
+            {
+                EditorGUILayout.HelpBox("Preset is not placed inside the avatar", MessageType.Warning);
+                return;
+            }
+
             if (GUILayout.Button("Sync"))
             {
-                SyncObjectState();
+                //SyncObjectState();
+                (target as MAExpressionPreset).HierarchyToPreset();
             }
 
             if (GUILayout.Button("Apply"))
             {
-                ApplyObjectState();
+                //ApplyObjectState();
+                (target as MAExpressionPreset).PresetToHierarchy();
             }
 
             EditorGUILayout.Separator();
@@ -96,29 +102,6 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
             }
 
             serializedObject.ApplyModifiedProperties();
-        }
-
-        public void Refresh()
-        {
-            var component = (target as MAExpressionPreset);
-
-            var obj = component.gameObject;
-            var avatar = obj.GetComponentInParent<VRCAvatarDescriptor>();
-
-            if (avatar != null)
-            {
-                var generators = avatar.GetComponentsInChildren<MAExpressionGenerator>();
-                if (component.Targets != null && generators.Length != component.Targets.Count)
-                {
-                    component.Targets.AddRange(generators.Where(x => !component.Targets.Any(y => x == y.Generator)).Select(x => new MAExpressionPreset.Group(x)));
-                    component.Targets.RemoveAll(x => x.Generator == null || x.Targets.Any(y => y.Object.IsEditorOnly()));
-                }
-                foreach (var x in component.Targets)
-                {
-                    x.Refresh();
-                }
-                EditorUtility.SetDirty(component);
-            }
         }
 
         public void SyncObjectState()

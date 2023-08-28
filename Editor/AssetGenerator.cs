@@ -6,8 +6,6 @@ using nadena.dev.modular_avatar.core;
 using UnityEditor;
 using UnityEditor.Animations;
 using UnityEngine;
-using UnityEngine.Windows;
-using static ICSharpCode.SharpZipLib.Zip.ExtendedUnixData;
 
 namespace gomoru.su.ModularAvatarExpressionGenerator
 {
