@@ -27,7 +27,7 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
                 {
                     ParamterPrefix = parent.name;
                 }
-                var targets = parent.GetComponentsInChildren<SkinnedMeshRenderer>(true).Where(x => !x.IsEditorOnly());
+                var targets = parent.GetComponentsInChildren<SkinnedMeshRenderer>(true);
 
                 if (Targets == null)
                 {
@@ -39,8 +39,8 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
                     var count = Targets.Count;
                     if (count != targets.Count())
                     {
-                        Targets.AddRange(targets.Where(x => !Targets.Any(y => y.Object == x.gameObject)).Select(x => new TargetObject(x.gameObject)));
-                        Targets.RemoveAll(x => x.Object == null || x.Object.IsEditorOnly() || !x.Object.IsIn(parent.gameObject));
+                        Targets.AddRange(targets.Where(x => !Targets.Any(y => y.Object == x.gameObject)).Select(x => new TargetObject(x.gameObject, !x.IsEditorOnly())));
+                        Targets.RemoveAll(x => x.Object == null || !x.Object.IsIn(parent.gameObject));
                         Targets.Sort((x, y) => x.Object.transform.GetSiblingIndex() - y.Object.transform.GetSiblingIndex());
                         EditorUtility.SetDirty(this);
                     }

@@ -92,7 +92,13 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
                 path = AssetDatabase.GUIDToAssetPath(guid);
             }
 
-            path = Path.Combine(path, subDir, $"{prefix}{(string.IsNullOrEmpty(prefix) ? "" : "_")}{GUID.Generate()}.asset");
+            var fileName = $"{prefix}{(string.IsNullOrEmpty(prefix) ? "" : "_")}{GUID.Generate()}.asset";
+
+            if (!string.IsNullOrEmpty(subDir))
+                path = Path.Combine(path, subDir, fileName);
+            else 
+                path = Path.Combine(path, fileName);
+
             CreateDirectoryRecursive(Path.GetDirectoryName(path));
             AssetDatabase.CreateAsset(container, path);
 

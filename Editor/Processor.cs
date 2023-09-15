@@ -21,7 +21,7 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
             var parent = obj.transform.parent.gameObject;
             var avatar = obj.GetComponentInParent<VRCAvatarDescriptor>();
             string avatarName = avatar == null ? null : string.IsNullOrEmpty(avatar.Name) ? avatar.gameObject.name : avatar.Name;
-            var container = AssetGenerator.CreateAssetContainer(subDir: $"{avatar.gameObject.scene.name}/{avatarName}/{parent.name}");
+            var container = AssetGenerator.CreateAssetContainer(subDir: $"{avatar.gameObject.scene.name}/{avatarName}{(avatar.gameObject != parent ? $"/{parent.name}" : "")}");
             var fx = new AnimatorController().AddTo(container);
 
             var items = target.Targets;
@@ -294,27 +294,21 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
                 x.parameters.Add(new ParameterConfig() { saved = false, syncType = ParameterSyncType.Int, nameOrPrefix = "Preset", localOnly = true });
             });
 
-            obj.GetOrAddComponent<ModularAvatarMenuInstaller>(x =>
-            {
-
-            });
+            var menu = ScriptableObject.CreateInstance<VRCExpressionsMenu>().AddTo(container); ;
+            menu.controls = presets.Select((y, i) =>
+                new VRCExpressionsMenu.Control()
+                {
+                    name = y.gameObject.name,
+                    type = VRCExpressionsMenu.Control.ControlType.Button,
+                    parameter = new VRCExpressionsMenu.Control.Parameter() { name = "Preset" },
+                    value = i + 1,
+                }).ToList();
 
             obj.GetOrAddComponent<ModularAvatarMenuItem>(x =>
             {
                 x.MenuSource = SubmenuSource.MenuAsset;
                 x.Control.type = VRCExpressionsMenu.Control.ControlType.SubMenu;
-                x.Control.subMenu = new VRCExpressionsMenu()
-                {
-                    controls = presets.Select((y, i) =>
-                    new VRCExpressionsMenu.Control()
-                    {
-                        name = y.gameObject.name,
-                        type = VRCExpressionsMenu.Control.ControlType.Button,
-                        parameter = new VRCExpressionsMenu.Control.Parameter() { name = "Preset" },
-                        value = i + 1,
-                    }).ToList(),
-                }
-                .AddTo(container);
+                x.Control.subMenu = menu;
             });
 
             AssetDatabase.SaveAssets();
@@ -327,7 +321,6 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
                 return;
 
             var obj = installTarget.gameObject;
-            obj.SetActive(false);
 
             var generators = avatarObject.GetComponentsInChildren<MAExpressionGenerator>();
 
