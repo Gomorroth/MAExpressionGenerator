@@ -16,9 +16,9 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
         private const string PresetPrefabEditorPrefsKey = "gomoru.su.MAExpressionGenerator.PresetPrefabGUID";
         private const string PresetManagerPrefabEditorPrefsKey = "gomoru.su.MAExpressionGenerator.ManagerPrefabGUID";
         private const string ArtifactFolderEditorPrefsKey = "gomoru.su.MAExpressionGenerator.ArtifactFolderGUID";
-        private const string PrefabPath = "Assets/MAExpressionGenerator/ExpressionGenerator.prefab";
-        private const string PresetPrefabPath = "Assets/MAExpressionGenerator/ExpressionPreset.prefab";
-        private const string ManagerPrefabPath = "Assets/MAExpressionGenerator/ExpressionPresetManager.prefab";
+        private const string PrefabPath = "Assets/MAExpressionGenerator/Generator.prefab";
+        private const string PresetPrefabPath = "Assets/MAExpressionGenerator/Preset.prefab";
+        private const string ManagerPrefabPath = "Assets/MAExpressionGenerator/PresetManager.prefab";
         private const string ArtifactFolderPath = "Assets/MAExpressionGenerator/Artifact";
 
         static AssetGenerator()
