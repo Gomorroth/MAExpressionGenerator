@@ -8,6 +8,8 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
 {
     internal static class EditorUtils
     {
+        public static bool Contains(this string str, string value, StringComparison comparisonType) => str.IndexOf(value, comparisonType) != -1;
+
         public static T GetOrAddComponent<T>(this GameObject obj, Action<T> action) where T : Component
         {
             var component = obj.GetComponent<T>();

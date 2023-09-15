@@ -10,6 +10,7 @@ using VRC.SDK3.Avatars.Components;
 using VRC.SDK3.Avatars.ScriptableObjects;
 using System.Collections.Immutable;
 using VRC.SDKBase;
+using System.Reflection.Emit;
 
 namespace gomoru.su.ModularAvatarExpressionGenerator
 {
@@ -47,7 +48,7 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
                 {
                     var mesh = smr.sharedMesh;
                     var boneWeights = mesh.boneWeights;
-                    foreach (var bone in boneWeights.Select(x => smr.bones[x.boneIndex0].gameObject).Where(x => !IsHumanoidBone(x.name)))
+                    foreach (var bone in boneWeights.Select(x => smr.bones[x.boneIndex0].gameObject).Where(x => !IsAvatarBone(x.name)))
                     {
                         if (!bone.IsIn(parent))
                         {
@@ -355,28 +356,32 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
             return EditorUtils.CombinePath(prefix, obj.transform.GetRelativePath(obj.GetParent()?.transform));
         }
 
-        private static bool IsHumanoidBone(string boneName) => HeuristicBoneMapper.NameToBoneMap.ContainsKey(HeuristicBoneMapper.NormalizeName(boneName)) || boneName.IndexOf("Breast", StringComparison.OrdinalIgnoreCase) != -1;
+        private static bool IsAvatarBone(string boneName) => HeuristicBoneMapper.IsHeuristicBone(boneName)
+             || boneName.Contains("Breast", StringComparison.OrdinalIgnoreCase)
+             || boneName.Contains("Bust", StringComparison.OrdinalIgnoreCase)
+            ;
 
         private static class HeuristicBoneMapper
         {
-            private static FieldInfo _fieldInfo = typeof(nadena.dev.modular_avatar.core.editor.AvatarProcessor).Assembly.GetType("nadena.dev.modular_avatar.core.editor.HeuristicBoneMapper").GetField("NameToBoneMap", BindingFlags.NonPublic | BindingFlags.Static) ?? throw new NullReferenceException();
-            private static ImmutableDictionary<string, HumanBodyBones> _cache;
-            public static ImmutableDictionary<string, HumanBodyBones> NameToBoneMap
-            {
-                get
-                {
-                    if (_cache == null)
-                        _cache = _fieldInfo.GetValue(null) as ImmutableDictionary<string, HumanBodyBones> ?? throw new InvalidOperationException();
-                    return _cache;
-                }
-            }
+            private static Func<string, bool> _isHeuristicBone;
 
-            public static string NormalizeName(string name)
+            public static bool IsHeuristicBone(string name) => _isHeuristicBone.Invoke(name);
+
+            static HeuristicBoneMapper()
             {
-                return name.ToLowerInvariant()
-                    .Replace("_", "")
-                    .Replace(".", "")
-                    .Replace(" ", "");
+                var type = typeof(nadena.dev.modular_avatar.core.editor.AvatarProcessor).Assembly.GetType("nadena.dev.modular_avatar.core.editor.HeuristicBoneMapper");
+                if (type == null)
+                    throw new Exception("HeuristicBoneMapper not found.");
+
+                var method = new DynamicMethod("", typeof(bool), new[] {typeof(string) }, type, true);
+                var il = method.GetILGenerator();
+                il.Emit(OpCodes.Ldsfld, type.GetField("NameToBoneMap", BindingFlags.NonPublic | BindingFlags.Static));
+                il.Emit(OpCodes.Ldarg_0);
+                il.Emit(OpCodes.Call, type.GetMethod("NormalizeName", BindingFlags.NonPublic | BindingFlags.Static));
+                il.Emit(OpCodes.Callvirt, typeof(ImmutableDictionary<string, HumanBodyBones>).GetMethod("ContainsKey"));
+                il.Emit(OpCodes.Ret);
+
+                _isHeuristicBone = method.CreateDelegate(typeof(Func<string, bool>)) as Func<string, bool>;
             }
         }
 
