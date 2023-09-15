@@ -75,73 +75,76 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
                 menu.controls.Add(new VRCExpressionsMenu.Control() { name = o.name, type = VRCExpressionsMenu.Control.ControlType.Toggle, parameter = new VRCExpressionsMenu.Control.Parameter() { name = parameterName } });
             }
 
-            foreach (var boneGroup in boneList.GroupBy(x => x.Bone).ToLookup(x => x.Select(x2 => x2.Parameter).Distinct(), x => x.Key).GroupBy(x => x.Key, x => x as IEnumerable<GameObject>, new Comparer()).OrderBy(x => x.Key.Count()))
+            if (target.GenerateBoneToggle)
             {
-                var name = $"Bone/{string.Join(", ", boneGroup.Key.Select(x => x.Substring(x.LastIndexOf("/") + 1).Replace(" ONOFF", "")))}";
-                name = EditorUtils.MakeAnimatorSafeName(name);
-
-                var off = new AnimationClip() { name = $"{name} OFF" }.AddTo(container);
-                var on = new AnimationClip() { name = $"{name} ON" }.AddTo(container);
-
-                foreach (var x in boneGroup)
+                foreach (var boneGroup in boneList.GroupBy(x => x.Bone).ToLookup(x => x.Select(x2 => x2.Parameter).Distinct(), x => x.Key).GroupBy(x => x.Key, x => x as IEnumerable<GameObject>, new Comparer()).OrderBy(x => x.Key.Count()))
                 {
-                    foreach (var x2 in x)
+                    var name = $"Bone/{string.Join(", ", boneGroup.Key.Select(x => x.Substring(x.LastIndexOf("/") + 1).Replace(" ONOFF", "")))}";
+                    name = EditorUtils.MakeAnimatorSafeName(name);
+
+                    var off = new AnimationClip() { name = $"{name} OFF" }.AddTo(container);
+                    var on = new AnimationClip() { name = $"{name} ON" }.AddTo(container);
+
+                    foreach (var x in boneGroup)
                     {
-                        var path = x2.transform.GetRelativePath(x2.GetRoot()?.transform);
-                        off.SetCurve(path, typeof(GameObject), "m_IsActive", AnimationCurve.Constant(0, 0, 0));
-                        on.SetCurve(path, typeof(GameObject), "m_IsActive", AnimationCurve.Constant(0, 0, 1));
+                        foreach (var x2 in x)
+                        {
+                            var path = x2.transform.GetRelativePath(x2.GetRoot()?.transform);
+                            off.SetCurve(path, typeof(GameObject), "m_IsActive", AnimationCurve.Constant(0, 0, 0));
+                            on.SetCurve(path, typeof(GameObject), "m_IsActive", AnimationCurve.Constant(0, 0, 1));
+                        }
                     }
-                }
 
-                var layer = new AnimatorControllerLayer()
-                {
-                    name = name,
-                    defaultWeight = 1,
-                    stateMachine = new AnimatorStateMachine() { name = name }.HideInHierarchy().AddTo(container),
-                };
-                var s = layer.stateMachine;
+                    var layer = new AnimatorControllerLayer()
+                    {
+                        name = name,
+                        defaultWeight = 1,
+                        stateMachine = new AnimatorStateMachine() { name = name }.HideInHierarchy().AddTo(container),
+                    };
+                    var s = layer.stateMachine;
 
-                var state_off = new AnimatorState()
-                {
-                    name = "OFF",
-                    writeDefaultValues = false,
-                    motion = off,
-                }
-                .HideInHierarchy().AddTo(container);
+                    var state_off = new AnimatorState()
+                    {
+                        name = "OFF",
+                        writeDefaultValues = false,
+                        motion = off,
+                    }
+                    .HideInHierarchy().AddTo(container);
 
-                var state_on = new AnimatorState()
-                {
-                    name = "ON",
-                    writeDefaultValues = false,
-                    motion = on,
-                }
-                .HideInHierarchy().AddTo(container);
+                    var state_on = new AnimatorState()
+                    {
+                        name = "ON",
+                        writeDefaultValues = false,
+                        motion = on,
+                    }
+                    .HideInHierarchy().AddTo(container);
 
-                foreach (var x in boneGroup.Key)
-                {
-                    state_off.AddTransition(new AnimatorStateTransition
+                    foreach (var x in boneGroup.Key)
+                    {
+                        state_off.AddTransition(new AnimatorStateTransition
+                        {
+                            hideFlags = HideFlags.HideInHierarchy,
+                            hasExitTime = false,
+                            duration = 0,
+                            conditions = new[] { new AnimatorCondition() { parameter = x, mode = AnimatorConditionMode.Greater, threshold = 0.5f } },
+                            destinationState = state_on
+                        }.HideInHierarchy().AddTo(container));
+                    }
+
+                    state_on.AddTransition(new AnimatorStateTransition
                     {
                         hideFlags = HideFlags.HideInHierarchy,
                         hasExitTime = false,
                         duration = 0,
-                        conditions = new[] { new AnimatorCondition() { parameter = x, mode = AnimatorConditionMode.Greater, threshold = 0.5f } },
-                        destinationState = state_on
+                        conditions = boneGroup.Key.Select(x => new AnimatorCondition() { parameter = x, mode = AnimatorConditionMode.Less, threshold = 0.5f }).ToArray(),
+                        destinationState = state_off
                     }.HideInHierarchy().AddTo(container));
+
+                    s.AddState(state_off, s.entryPosition + new Vector3(200, 0));
+                    s.AddState(state_on, s.entryPosition + new Vector3(200, 100));
+
+                    fx.AddLayer(layer);
                 }
-
-                state_on.AddTransition(new AnimatorStateTransition
-                {
-                    hideFlags = HideFlags.HideInHierarchy,
-                    hasExitTime = false,
-                    duration = 0,
-                    conditions = boneGroup.Key.Select(x => new AnimatorCondition() { parameter = x, mode = AnimatorConditionMode.Less, threshold = 0.5f }).ToArray(),
-                    destinationState = state_off
-                }.HideInHierarchy().AddTo(container));
-
-                s.AddState(state_off, s.entryPosition + new Vector3(200, 0));
-                s.AddState(state_on, s.entryPosition + new Vector3(200, 100));
-
-                fx.AddLayer(layer);
             }
 
             obj.GetOrAddComponent<ModularAvatarMenuInstaller>(x =>

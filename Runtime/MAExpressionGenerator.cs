@@ -15,6 +15,9 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
         public List<TargetObject> Targets;
 
         [SerializeField]
+        public bool GenerateBoneToggle = true;
+
+        [SerializeField]
         public string ParamterPrefix = "\u200B";
 
 #if UNITY_EDITOR

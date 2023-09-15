@@ -8,6 +8,7 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
     {
         private SerializedProperty _targets;
         private SerializedProperty _parameterPrefix;
+        private SerializedProperty _generateBoneToggle;
         private UnityEditorInternal.ReorderableList _targetsList;
 
         private static bool _isOptionFoldout = false;
@@ -16,6 +17,7 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
         {
             _targets = serializedObject.FindProperty(nameof(MAExpressionGenerator.Targets));
             _parameterPrefix = serializedObject.FindProperty(nameof(MAExpressionGenerator.ParamterPrefix));
+            _generateBoneToggle = serializedObject.FindProperty(nameof(MAExpressionGenerator.GenerateBoneToggle));
 
             _targetsList = new UnityEditorInternal.ReorderableList(serializedObject, _targets)
             {
@@ -81,6 +83,8 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
             serializedObject.Update();
 
             _targetsList.DoLayoutList();
+
+            EditorGUILayout.PropertyField(_generateBoneToggle);
 
             if (_isOptionFoldout = EditorGUILayout.BeginFoldoutHeaderGroup(_isOptionFoldout, "Option"))
             {
