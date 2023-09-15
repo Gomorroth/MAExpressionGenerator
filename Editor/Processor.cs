@@ -21,7 +21,7 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
             var parent = obj.transform.parent.gameObject;
             var avatar = obj.GetComponentInParent<VRCAvatarDescriptor>();
             string avatarName = avatar == null ? null : string.IsNullOrEmpty(avatar.Name) ? avatar.gameObject.name : avatar.Name;
-            var container = AssetGenerator.CreateAssetContainer(subDir: $"{avatar.gameObject.scene.name}/{avatarName}");
+            var container = AssetGenerator.CreateAssetContainer(subDir: $"{avatar.gameObject.scene.name}/{avatarName}/{parent.name}");
             var fx = new AnimatorController().AddTo(container);
 
             var items = target.Targets;
@@ -62,8 +62,8 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
                 var path = o.transform.GetRelativePath(o.GetRoot()?.transform);
                 anim.SetCurve(path, typeof(GameObject), "m_IsActive", AnimationCurve.Linear(0, 0, 1 / 60f, 1));
 
-                parameter.parameters.Add(new ParameterConfig() { nameOrPrefix = parameterName, syncType = ParameterSyncType.Bool, saved = true, defaultValue = o.activeInHierarchy ? 1 : 0 });
-                fx.AddParameter(new AnimatorControllerParameter() { name = parameterName, defaultFloat = o.activeInHierarchy ? 1 : 0, type = AnimatorControllerParameterType.Float });
+                parameter.parameters.Add(new ParameterConfig() { nameOrPrefix = parameterName, syncType = ParameterSyncType.Bool, saved = true, defaultValue = item.Active ? 1 : 0 });
+                fx.AddParameter(new AnimatorControllerParameter() { name = parameterName, defaultFloat = item.Active ? 1 : 0, type = AnimatorControllerParameterType.Float });
 
                 var layer = fx.AddLayer(anim.name, container);
                 var state = layer.stateMachine.AddState("ONOFF", layer.stateMachine.entryPosition + new Vector3(200, 0));

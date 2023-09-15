@@ -23,22 +23,52 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
                 displayAdd = false,
                 displayRemove = false,
                 footerHeight = 0,
-                drawHeaderCallback = rect => EditorGUI.LabelField(rect, "Target"),
+                drawHeaderCallback = rect =>
+                {
+                    rect.height = EditorGUIUtility.singleLineHeight;
+
+                    var enableRect = rect;
+                    enableRect.width = rect.height * "Include".Length / 2;
+
+                    var activeRect = rect;
+                    activeRect.width = rect.height * "Active".Length / 2;
+                    activeRect.x += enableRect.width;
+
+                    var targetRect = rect;
+                    targetRect.width -= enableRect.width + activeRect.width;
+                    targetRect.x += enableRect.width + activeRect.width;
+
+
+                    EditorGUI.LabelField(enableRect, "Include");
+                    EditorGUI.LabelField(activeRect, "Active");
+                    EditorGUI.LabelField(targetRect, "Target");
+                },
                 drawElementCallback = (rect, index, isActive, isFocused) =>
                 {
                     var element = _targets.GetArrayElementAtIndex(index);
                     var target = element.FindPropertyRelative(nameof(TargetObject.Object));
                     var enable = element.FindPropertyRelative(nameof(TargetObject.Enable));
+                    var active = element.FindPropertyRelative(nameof(TargetObject.Active));
 
                     rect.height = EditorGUIUtility.singleLineHeight;
-                    var rect2 = rect;
-                    rect2.width = rect2.height;
-                    EditorGUI.PropertyField(rect2, enable, GUIContent.none);
 
-                    rect.x += rect.height;
-                    rect.width -= rect.height;
+                    var enableRect = rect;
+                    enableRect.width = rect.height * "Include".Length / 2;
+                    enableRect.x += enableRect.width / 4;
+
+                    var activeRect = rect;
+                    activeRect.width = rect.height * "Active".Length / 2;
+                    activeRect.x += enableRect.width + activeRect.width / 4;
+
+                    var targetRect = rect;
+                    targetRect.width -= enableRect.width + activeRect.width;
+                    targetRect.x += enableRect.width + activeRect.width;
+
+                    EditorGUI.PropertyField(enableRect, enable, GUIContent.none);
+                    EditorGUI.PropertyField(activeRect, active, GUIContent.none);
+
                     EditorGUI.BeginDisabledGroup(true);
-                    EditorGUI.PropertyField (rect, target, GUIContent.none);
+                    EditorGUI.PropertyField (targetRect, target, GUIContent.none);
                     EditorGUI.EndDisabledGroup();
                 },
             };
