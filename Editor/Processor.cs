@@ -19,7 +19,10 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
         {
             var obj = target.gameObject;
             var parent = obj.transform.parent.gameObject;
-            var fx = AssetGenerator.CreateArtifact(prefix: $"{parent.name}_{DateTime.Now:yyyyMMdd_HHmmss}");
+            var avatar = obj.GetComponentInParent<VRCAvatarDescriptor>();
+            string avatarName = avatar == null ? null : string.IsNullOrEmpty(avatar.Name) ? avatar.gameObject.name : avatar.Name;
+            var container = AssetGenerator.CreateAssetContainer(subDir: $"{avatar.gameObject.scene.name}/{avatarName}");
+            var fx = new AnimatorController().AddTo(container);
 
             var items = target.Targets;
 
@@ -31,7 +34,9 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
             var boneList = new List<(string Parameter, GameObject Bone)>();
             bool useBoneToggle = true;
 
-            var menu = new VRCExpressionsMenu() { name = "Menu" }.AddTo(fx);
+            var menu = ScriptableObject.CreateInstance<VRCExpressionsMenu>();
+            menu.name = "Menu";
+            menu.AddTo(container);
 
             foreach (var item in items)
             {
@@ -52,7 +57,7 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
                         boneList.Add((parameterName, bone));
                     }
                 }
-                var anim = new AnimationClip() { name = $"{o.name} ONOFF" }.AddTo(fx);
+                var anim = new AnimationClip() { name = $"{o.name} ONOFF" }.AddTo(container);
 
                 var path = o.transform.GetRelativePath(o.GetRoot()?.transform);
                 anim.SetCurve(path, typeof(GameObject), "m_IsActive", AnimationCurve.Linear(0, 0, 1 / 60f, 1));
@@ -60,27 +65,12 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
                 parameter.parameters.Add(new ParameterConfig() { nameOrPrefix = parameterName, syncType = ParameterSyncType.Bool, saved = true, defaultValue = o.activeInHierarchy ? 1 : 0 });
                 fx.AddParameter(new AnimatorControllerParameter() { name = parameterName, defaultFloat = o.activeInHierarchy ? 1 : 0, type = AnimatorControllerParameterType.Float });
 
-                var layer = new AnimatorControllerLayer()
-                {
-                    name = anim.name,
-                    defaultWeight = 1,
-                    stateMachine = new AnimatorStateMachine() { name = anim.name }.HideInHierarchy().AddTo(fx),
-                };
-
-                var s = layer.stateMachine;
-                var state = new AnimatorState()
-                {
-                    name = o.name,
-                    writeDefaultValues = false,
-                    motion = anim,
-                    timeParameter = parameterName,
-                    timeParameterActive = true,
-                }
-                .HideInHierarchy().AddTo(fx);
-
-                s.AddState(state, s.entryPosition + new Vector3(200, 0));
-
-                fx.AddLayer(layer);
+                var layer = fx.AddLayer(anim.name, container);
+                var state = layer.stateMachine.AddState("ONOFF", layer.stateMachine.entryPosition + new Vector3(200, 0));
+                state.writeDefaultValues = false;
+                state.motion = anim;
+                state.timeParameterActive = true;
+                state.timeParameter = parameterName;
 
                 menu.controls.Add(new VRCExpressionsMenu.Control() { name = o.name, type = VRCExpressionsMenu.Control.ControlType.Toggle, parameter = new VRCExpressionsMenu.Control.Parameter() { name = parameterName } });
             }
@@ -88,9 +78,10 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
             foreach (var boneGroup in boneList.GroupBy(x => x.Bone).ToLookup(x => x.Select(x2 => x2.Parameter).Distinct(), x => x.Key).GroupBy(x => x.Key, x => x as IEnumerable<GameObject>, new Comparer()).OrderBy(x => x.Key.Count()))
             {
                 var name = $"Bone/{string.Join(", ", boneGroup.Key.Select(x => x.Substring(x.LastIndexOf("/") + 1).Replace(" ONOFF", "")))}";
+                name = EditorUtils.MakeAnimatorSafeName(name);
 
-                var off = new AnimationClip() { name = $"{name} OFF" }.AddTo(fx);
-                var on = new AnimationClip() { name = $"{name} ON" }.AddTo(fx);
+                var off = new AnimationClip() { name = $"{name} OFF" }.AddTo(container);
+                var on = new AnimationClip() { name = $"{name} ON" }.AddTo(container);
 
                 foreach (var x in boneGroup)
                 {
@@ -106,25 +97,25 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
                 {
                     name = name,
                     defaultWeight = 1,
-                    stateMachine = new AnimatorStateMachine() { name = name }.HideInHierarchy().AddTo(fx),
+                    stateMachine = new AnimatorStateMachine() { name = name }.HideInHierarchy().AddTo(container),
                 };
                 var s = layer.stateMachine;
 
                 var state_off = new AnimatorState()
                 {
-                    name = name,
+                    name = "OFF",
                     writeDefaultValues = false,
                     motion = off,
                 }
-                .HideInHierarchy().AddTo(fx);
+                .HideInHierarchy().AddTo(container);
 
                 var state_on = new AnimatorState()
                 {
-                    name = name,
+                    name = "ON",
                     writeDefaultValues = false,
                     motion = on,
                 }
-                .HideInHierarchy().AddTo(fx);
+                .HideInHierarchy().AddTo(container);
 
                 foreach (var x in boneGroup.Key)
                 {
@@ -135,7 +126,7 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
                         duration = 0,
                         conditions = new[] { new AnimatorCondition() { parameter = x, mode = AnimatorConditionMode.Greater, threshold = 0.5f } },
                         destinationState = state_on
-                    }.HideInHierarchy().AddTo(fx));
+                    }.HideInHierarchy().AddTo(container));
                 }
 
                 state_on.AddTransition(new AnimatorStateTransition
@@ -145,7 +136,7 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
                     duration = 0,
                     conditions = boneGroup.Key.Select(x => new AnimatorCondition() { parameter = x, mode = AnimatorConditionMode.Less, threshold = 0.5f }).ToArray(),
                     destinationState = state_off
-                }.HideInHierarchy().AddTo(fx));
+                }.HideInHierarchy().AddTo(container));
 
                 s.AddState(state_off, s.entryPosition + new Vector3(200, 0));
                 s.AddState(state_on, s.entryPosition + new Vector3(200, 100));
@@ -174,11 +165,6 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
                 x.pathMode = MergeAnimatorPathMode.Absolute;
             });
 
-            obj.GetOrAddComponent<Animator>(x =>
-            {
-                x.runtimeAnimatorController = fx;
-            });
-
             obj.name = parent.name;
 
             AssetDatabase.SaveAssets();
@@ -191,7 +177,8 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
             if (presets.Length == 0)
                 return;
 
-            var fx = AssetGenerator.CreateArtifact(useModularAvatarTemporaryFolder: true);
+            var container = AssetGenerator.CreateAssetContainer(useModularAvatarTemporaryFolder: true);
+            var fx = new AnimatorController().AddTo(container);
 
             var manager = avatarObject.GetComponentInChildren<MAExpressionPresetManager>();
             GameObject obj;
@@ -210,12 +197,12 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
             {
                 name = "Preset",
                 defaultWeight = 1,
-                stateMachine = new AnimatorStateMachine() { name = "Preset" }.HideInHierarchy().AddTo(fx),
+                stateMachine = new AnimatorStateMachine() { name = "Preset" }.HideInHierarchy().AddTo(container),
             };
 
             var s = layer.stateMachine;
 
-            var blank = new AnimationClip().HideInHierarchy().AddTo(fx);
+            var blank = new AnimationClip().HideInHierarchy().AddTo(container);
 
             var states = new AnimatorState[presets.Length];
 
@@ -228,7 +215,7 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
                     writeDefaultValues = false,
                     motion = blank,
                 }
-                .HideInHierarchy().AddTo(fx);
+                .HideInHierarchy().AddTo(container);
 
                 var d = state.AddStateMachineBehaviour<VRCAvatarParameterDriver>();
                 var a = preset.Targets.Select(x => x.Targets.Select(y => (Name: GetParameterName(x.Generator.ParamterPrefix, y.Object), y.Enable))).SelectMany(x => x);
@@ -243,7 +230,7 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
                 writeDefaultValues = false,
                 motion = blank,
             }
-            .HideInHierarchy().AddTo(fx);
+            .HideInHierarchy().AddTo(container);
 
             s.AddState(idle, s.entryPosition + new Vector3(200, 0));
 
@@ -256,7 +243,7 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
                     conditions = new AnimatorCondition[] { new AnimatorCondition() { parameter = "Preset", mode = AnimatorConditionMode.Equals, threshold = 0 } },
                     duration = 0,
                     hasExitTime = false,
-                }.HideInHierarchy().AddTo(fx);
+                }.HideInHierarchy().AddTo(container);
 
                 state.AddTransition(t);
 
@@ -266,7 +253,7 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
                     conditions = new AnimatorCondition[] { new AnimatorCondition() { parameter = "Preset", mode = AnimatorConditionMode.Equals, threshold = i + 1 } },
                     duration = 0,
                     hasExitTime = false,
-                }.HideInHierarchy().AddTo(fx);
+                }.HideInHierarchy().AddTo(container);
 
                 idle.AddTransition(t);
 
@@ -282,7 +269,7 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
                         conditions = new AnimatorCondition[] { new AnimatorCondition() { parameter = "Preset", mode = AnimatorConditionMode.Equals, threshold = i2 + 1 } },
                         duration = 0,
                         hasExitTime = false,
-                    }.HideInHierarchy().AddTo(fx);
+                    }.HideInHierarchy().AddTo(container);
 
                     state.AddTransition(t);
                 }
@@ -309,10 +296,7 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
 
             obj.GetOrAddComponent<ModularAvatarMenuInstaller>(x =>
             {
-                if (x.installTargetMenu == null)
-                {
-                    x.installTargetMenu = avatarObject.GetComponent<VRCAvatarDescriptor>().expressionsMenu;
-                }
+
             });
 
             obj.GetOrAddComponent<ModularAvatarMenuItem>(x =>
@@ -330,12 +314,10 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
                         value = i + 1,
                     }).ToList(),
                 }
-                .AddTo(fx);
+                .AddTo(container);
             });
 
             AssetDatabase.SaveAssets();
-
-            //obj.SetActive(true);
         }
 
         public static void GenerateInstallTargets(GameObject avatarObject)
@@ -360,7 +342,10 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
                 var installer = generator.GetComponent<ModularAvatarMenuInstaller>();
                 if (installer != null)
                 {
-                    var c = obj.AddComponent(MenuInstallerTargetType);
+                    var o = new GameObject();
+                    o.SetActive(false);
+                    o.transform.parent = obj.transform.parent;
+                    var c = o.AddComponent(MenuInstallerTargetType);
                     MenuInstallerTargetInstallerField.SetValue(c, installer);
                 }
             }
@@ -418,7 +403,6 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
                 {
                     hash = hash * Prime2 + x.GetHashCode();
                 }
-                Debug.Log(hash);
                 return hash;
             }
         }

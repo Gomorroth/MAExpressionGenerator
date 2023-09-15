@@ -92,9 +92,18 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
             for (int i = 0; i < targets.Length; i++)
             {
                 var x = targets[i];
-                var y = generators[i];
+                bool exist = false;
+                for(int i2 = 0; i2 < generators.Length; i2++)
+                {
+                    var y = generators[i];
 
-                if (x.Generator != y)
+                    if (x.Generator == y)
+                    {
+                        exist = true;
+                        break;
+                    }
+                }
+                if (!exist)
                     return false;
             }
 

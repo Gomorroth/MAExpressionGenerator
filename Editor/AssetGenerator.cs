@@ -6,6 +6,7 @@ using nadena.dev.modular_avatar.core;
 using UnityEditor;
 using UnityEditor.Animations;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 namespace gomoru.su.ModularAvatarExpressionGenerator
 {
@@ -69,6 +70,35 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
             }
         }
 
+        public static Object CreateAssetContainer(string prefix = null, string subDir = null, bool useModularAvatarTemporaryFolder = false)
+        {
+            var container = ScriptableObject.CreateInstance<AssetContainer>();
+
+            string path;
+            if (useModularAvatarTemporaryFolder)
+            {
+                path = GetGeneratedAssetsFolder();
+            }
+            else
+            {
+                var guid = EditorPrefs.GetString(ArtifactFolderEditorPrefsKey, null);
+                if (string.IsNullOrEmpty(guid) || string.IsNullOrEmpty(AssetDatabase.GUIDToAssetPath(guid)) || !AssetDatabase.IsValidFolder(AssetDatabase.GUIDToAssetPath(guid)))
+                {
+                    if (!AssetDatabase.IsValidFolder("Assets/MAExpressionGenerator"))
+                        AssetDatabase.CreateFolder("Assets", "MAExpressionGenerator");
+                    guid = AssetDatabase.CreateFolder("Assets/MAExpressionGenerator", "Artifact");
+                    EditorPrefs.SetString(ArtifactFolderEditorPrefsKey, guid);
+                }
+                path = AssetDatabase.GUIDToAssetPath(guid);
+            }
+
+            path = Path.Combine(path, subDir, $"{prefix}{(string.IsNullOrEmpty(prefix) ? "" : "_")}{GUID.Generate()}.asset");
+            CreateDirectoryRecursive(Path.GetDirectoryName(path));
+            AssetDatabase.CreateAsset(container, path);
+
+            return container;
+        }
+
         public static AnimatorController CreateArtifact(string prefix = null, bool useModularAvatarTemporaryFolder = false)
         {
             var fx = new AnimatorController();
@@ -89,6 +119,7 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
                     EditorPrefs.SetString(ArtifactFolderEditorPrefsKey, guid);
                 }
                 path = AssetDatabase.GUIDToAssetPath(guid);
+
             }
 
 
@@ -96,15 +127,25 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
             return fx;
         }
 
-        private static MethodInfo _GetGeneratedAssetsFolder = typeof(nadena.dev.modular_avatar.core.editor.AvatarProcessor).Assembly.GetTypes().FirstOrDefault(x => x.Name == "Util")?.GetMethod(nameof(GetGeneratedAssetsFolder), BindingFlags.Static | BindingFlags.NonPublic);
-
-        public static string GetGeneratedAssetsFolder()
+        // https://github.com/bdunderscore/modular-avatar/blob/b15520271455350cf728bc1b95b874dc30682eb2/Packages/nadena.dev.modular-avatar/Editor/Util.cs#L162C9-L178C10
+        // Originally under MIT License
+        // Copyright (c) 2022 bd_
+        private static string GetGeneratedAssetsFolder()
         {
-            var method = _GetGeneratedAssetsFolder;
-            if (method != null)
-                return method.Invoke(null, null) as string;
+            var path = "Assets/999_Modular_Avatar_Generated";
 
-            return null;
+            var pathParts = path.Split('/');
+
+            for (int i = 1; i < pathParts.Length; i++)
+            {
+                var subPath = string.Join("/", pathParts, 0, i + 1);
+                if (!AssetDatabase.IsValidFolder(subPath))
+                {
+                    AssetDatabase.CreateFolder(string.Join("/", pathParts, 0, i), pathParts[i]);
+                }
+            }
+
+            return path;
         }
     }
 }

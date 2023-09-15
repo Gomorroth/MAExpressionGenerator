@@ -1,5 +1,6 @@
 ﻿using System;
 using UnityEditor;
+using UnityEditor.Animations;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
@@ -81,6 +82,29 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
             {
                 return $"{left}/{right}";
             }
+        }
+
+        public static AnimatorControllerLayer AddLayer(this AnimatorController controller, string name, Object container)
+        {
+            name = MakeAnimatorSafeName(name);
+            var layer = new AnimatorControllerLayer()
+            {
+                name = name,
+                defaultWeight = 1,
+                stateMachine = new AnimatorStateMachine() { name = name }.HideInHierarchy().AddTo(container),
+            };
+            controller.AddLayer(layer);
+            return layer;
+        }
+
+        public static string MakeAnimatorSafeName(string name)
+        {
+            if (name.IndexOf(".", StringComparison.OrdinalIgnoreCase) == -1)
+                return name;
+
+            name = name.Replace(".", "_");
+
+            return name;
         }
     }
 }

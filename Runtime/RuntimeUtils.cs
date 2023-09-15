@@ -9,8 +9,8 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
     public static class RuntimeUtils
     {
         private const string EditorOnlyTag = "EditorOnly";
-        public static bool IsEditorOnly(this GameObject obj) => obj.tag == EditorOnlyTag;
-        public static bool IsEditorOnly(this Component component) => component.tag == EditorOnlyTag;
+        public static bool IsEditorOnly(this GameObject obj) => obj.CompareTag(EditorOnlyTag);
+        public static bool IsEditorOnly(this Component component) => component.CompareTag(EditorOnlyTag);
 
         public static bool IsIn(this GameObject obj, GameObject target)
         {
