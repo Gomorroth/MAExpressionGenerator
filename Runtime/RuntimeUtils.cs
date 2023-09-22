@@ -25,6 +25,61 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
             return false;
         }
 
+
+        public static string GetRelativePath(this Transform transform, Transform root, bool includeRelativeTo = false)
+        {
+            var buffer = _relativePathBuffer;
+            if (buffer is null)
+            {
+                buffer = _relativePathBuffer = new string[128];
+            }
+
+            var t = transform;
+            int idx = buffer.Length;
+            while (t != null && t != root)
+            {
+                buffer[--idx] = t.name;
+                t = t.parent;
+            }
+            if (includeRelativeTo && t != null && t == root)
+            {
+                buffer[--idx] = t.name;
+            }
+
+            return string.Join("/", buffer, idx, buffer.Length - idx);
+        }
+
+        private static string[] _relativePathBuffer;
+
+
+        public static GameObject GetParent(this GameObject obj) => obj?.transform.parent?.gameObject;
+
+        public static GameObject GetRoot(this GameObject obj)
+        {
+            var t = obj?.transform;
+            while (t?.parent != null)
+            {
+                t = t.parent;
+            }
+            return t?.gameObject;
+        }
+
+        public static string CombinePath(string left, string right)
+        {
+            if (string.IsNullOrEmpty(left))
+            {
+                return right;
+            }
+            else if (left.EndsWith("/"))
+            {
+                return $"{left}{right}";
+            }
+            else
+            {
+                return $"{left}/{right}";
+            }
+        }
+
         [System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)]
         [System.ComponentModel.Browsable(false)]
         public static Action<MAExpressionBaseComponent> OnAwake;

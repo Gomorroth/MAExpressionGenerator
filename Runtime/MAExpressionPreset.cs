@@ -24,12 +24,12 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
 
             if (avatar != null)
             {
-                var generators = avatar.GetComponentsInChildren<MAExpressionGenerator>();
+                var generators = avatar.GetComponentsInChildren<MAExpressionObjectController>();
                 bool isDirt = false;
                 if (Targets != null && !Equals(generators))
                 {
-                    Targets.AddRange(generators.Where(x => !Targets.Any(y => x == y.Generator)).Select(x => new Group(x)));
-                    Targets.RemoveAll(x => x.Generator == null || x.Targets.Any(y => y.Object.IsEditorOnly()));
+                    Targets.AddRange(generators.Where(x => !Targets.Any(y => x == y.Target)).Select(x => new Group(x)));
+                    Targets.RemoveAll(x => x.Target == null || x.Targets.Any(y => y.Object.IsEditorOnly()));
                     isDirt = true;
                 }
                 foreach (var x in Targets)
@@ -83,7 +83,7 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
 
 #endif
 
-        private bool Equals(MAExpressionGenerator[] generators)
+        private bool Equals(MAExpressionObjectController[] generators)
         {
             var targets = Targets.AsSpan();
             if (targets.Length != generators.Length)
@@ -97,7 +97,7 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
                 {
                     var y = generators[i];
 
-                    if (x.Generator == y)
+                    if (x.Target == y)
                     {
                         exist = true;
                         break;
@@ -114,26 +114,27 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
         public class Group
         {
             [SerializeField]
-            public MAExpressionGenerator Generator;
+            public MAExpressionObjectController Target;
 
             [SerializeField]
             public List<TargetObject> Targets = new List<TargetObject>();
 
             public bool Refresh()
             {
-                if (Generator?.Targets?.Count != Targets.Count)
+                var targets = Target.GetControlObjects();
+                if (targets.Count() != Targets.Count)
                 {
-                    Targets.AddRange(Generator.Targets.Where(x => !Targets.Any(y => x.Object == y.Object)).Select(x => new TargetObject(x.Object, false)));
-                    Targets.RemoveAll(x => !Generator.Targets.Any(y => x.Object == y.Object) || x.Object.IsEditorOnly());
+                    Targets.AddRange(targets.Where(x => !Targets.Any(y => x.Object == y.Object)).Select(x => new TargetObject(x.Object, false)));
+                    Targets.RemoveAll(x => !targets.Any(y => x.Object == y.Object) || x.Object.IsEditorOnly());
                     return true;
                 }
                 return false;
             }
 
-            public Group(MAExpressionGenerator generator)
+            public Group(MAExpressionObjectController target)
             {
-                Generator = generator;
-                Targets = new List<TargetObject>(generator.Targets.Select(x => new TargetObject(x.Object, false)));
+                Target = target;
+                Targets = new List<TargetObject>(target.GetControlObjects());
             }
         }
     }
