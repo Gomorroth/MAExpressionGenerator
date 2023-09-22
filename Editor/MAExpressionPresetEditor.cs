@@ -57,19 +57,22 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
 
             EditorGUILayout.Separator();
 
-            Array.Resize(ref _foldOuts, _targets.arraySize);
-            for (int i = 0; i < _foldOuts.Length; i++)
+            if (_foldOuts?.Length != _targets.arraySize)
             {
-                _foldOuts[i] = true;
+                Array.Resize(ref _foldOuts, _targets.arraySize);
+                for (int i = 0; i < _foldOuts.Length; i++)
+                {
+                    _foldOuts[i] = true;
+                }
             }
 
             for (int i = 0; i < _targets.arraySize; i++)
             {
                 var x = _targets.GetArrayElementAtIndex(i);
                 var list = x.FindPropertyRelative(nameof(MAExpressionPreset.Group.Targets));
-                var generator = x.FindPropertyRelative(nameof(MAExpressionPreset.Group.Generator)).objectReferenceValue as MAExpressionGenerator;
+                var generator = x.FindPropertyRelative(nameof(MAExpressionPreset.Group.Target)).objectReferenceValue as MAExpressionObjectController;
 
-                if (_foldOuts[i] = EditorGUILayout.BeginFoldoutHeaderGroup(_foldOuts[i], generator?.name))
+                if (_foldOuts[i] = EditorGUILayout.BeginFoldoutHeaderGroup(_foldOuts[i], generator?.DisplayName))
                 {
                     new UnityEditorInternal.ReorderableList(serializedObject, list)
                     {

@@ -7,8 +7,10 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
     [ExecuteInEditMode]
     public abstract class MAExpressionBaseComponent : MonoBehaviour, IEditorOnly
     {
+        protected internal const string InitialParameterPrefix = "\u200B";
+
 #if UNITY_EDITOR
-        public void Awake()
+        private void Awake()
         {
             if (UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode)
             {

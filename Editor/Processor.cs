@@ -11,6 +11,7 @@ using VRC.SDK3.Avatars.ScriptableObjects;
 using System.Collections.Immutable;
 using VRC.SDKBase;
 using System.Reflection.Emit;
+using Object = UnityEngine.Object;
 
 namespace gomoru.su.ModularAvatarExpressionGenerator
 {
@@ -174,28 +175,73 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
             AssetDatabase.SaveAssets();
         }
 
-        public static void GeneratePresets(GameObject avatarObject)
+        public static void GenerateSimpleToggle(in RuntimeBuildContext context)
         {
-            var presets = avatarObject.GetComponentsInChildren<MAExpressionPreset>();
+            var root = new GameObject();
+            root.transform.parent = context.AvatarObject.transform;
+            root.SetActive(false);
+
+            var parameters = root.AddComponent<ModularAvatarParameters>();
+
+            var fx = new AnimatorController() { name = "SimpleToggle" }.AddTo(context.Artifact);
+            foreach(var component in context.AvatarObject.GetComponentsInChildren<MAExpressionSimpleToggle>())
+            {
+                var obj = component.GetTargetObject();
+                var layer = fx.AddLayer(obj.name, context.Artifact);
+                var stateMachine = layer.stateMachine;
+                var state = stateMachine.AddState("ONOFF", Vector3.zero);
+                state.writeDefaultValues = false;
+                state.timeParameter = GetParameterName(component.GetParameterPrefix(), obj);
+                state.timeParameterActive = true;
+
+                var anim = new AnimationClip() { name = $"{obj.name} ONOFF" }.AddTo(context.Artifact);
+
+                var path = obj.transform.GetRelativePath(context.AvatarObject.transform);
+                anim.SetCurve(path, typeof(GameObject), "m_IsActive", AnimationCurve.Linear(0, 0, 1 / 60f, 1));
+
+                state.motion = anim;
+
+                fx.AddParameter(new AnimatorControllerParameter() { name = state.timeParameter, type = AnimatorControllerParameterType.Float, defaultFloat = obj.activeInHierarchy ? 1 : 0 });
+                parameters.parameters.Add(new ParameterConfig() { nameOrPrefix = state.timeParameter, syncType = ParameterSyncType.Bool, defaultValue = obj.activeInHierarchy ? 1 : 0, saved = component.IsSave, localOnly = !component.IsSynced });
+
+                var menuInstaller = root.AddComponent<ModularAvatarMenuInstaller>();
+                var menu = menuInstaller.menuToAppend = ScriptableObject.CreateInstance<VRCExpressionsMenu>().AddTo(context.Artifact);
+                menu.controls.Add(new VRCExpressionsMenu.Control() { name = component.DisplayName, parameter = new VRCExpressionsMenu.Control.Parameter() { name = state.timeParameter }, type = VRCExpressionsMenu.Control.ControlType.Toggle });
+            }
+
+            root.GetOrAddComponent<ModularAvatarMergeAnimator>(x =>
+            {
+                x.animator = fx;
+                x.layerType = VRCAvatarDescriptor.AnimLayerType.FX;
+                x.matchAvatarWriteDefaults = true;
+                x.pathMode = MergeAnimatorPathMode.Absolute;
+            });
+        }
+
+        public static void GeneratePresets(in RuntimeBuildContext context)
+        {
+            var presets = context.AvatarObject.GetComponentsInChildren<MAExpressionPreset>();
 
             if (presets.Length == 0)
                 return;
 
-            var container = AssetGenerator.CreateAssetContainer(useModularAvatarTemporaryFolder: true);
-            var fx = new AnimatorController().AddTo(container);
+            var container = context.Artifact;
+            var fx = new AnimatorController() { name = "Preset" }.AddTo(container);
 
-            var manager = avatarObject.GetComponentInChildren<MAExpressionPresetManager>();
+            var manager = context.AvatarObject.GetComponentInChildren<MAExpressionPresetManager>();
             GameObject obj;
             if (manager != null)
             {
                 obj = manager.gameObject;
+                obj.SetActive(false);
             }
             else
             {
                 obj = new GameObject("Preset");
-                obj.transform.parent = avatarObject.transform;
+                obj.transform.parent = context.AvatarObject.transform;
+                obj.SetActive(false);
+                obj.AddComponent<ModularAvatarMenuInstaller>();
             }
-            obj.SetActive(false);
 
             var layer = new AnimatorControllerLayer()
             {
@@ -222,7 +268,7 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
                 .HideInHierarchy().AddTo(container);
 
                 var d = state.AddStateMachineBehaviour<VRCAvatarParameterDriver>();
-                var a = preset.Targets.Select(x => x.Targets.Select(y => (Name: GetParameterName(x.Generator.ParamterPrefix, y.Object), y.Enable))).SelectMany(x => x);
+                var a = preset.Targets.Select(x => x.Targets.Select(y => (Name: GetParameterName(x.Target.GetParameterPrefix(), y.Object), y.Enable))).SelectMany(x => x);
                 d.parameters.AddRange(a.Select(x => new VRC_AvatarParameterDriver.Parameter() { name = x.Name, type = VRC_AvatarParameterDriver.ChangeType.Set, value = x.Enable ? 1 : 0 }));
 
                 states[i] = state;
@@ -353,7 +399,7 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
 
         internal static string GetParameterName(string prefix, GameObject obj)
         {
-            return EditorUtils.CombinePath(prefix, obj.transform.GetRelativePath(obj.GetParent()?.transform));
+            return RuntimeUtils.CombinePath(prefix, obj.transform.GetRelativePath(obj.GetParent()?.transform));
         }
 
         private static bool IsAvatarBone(string boneName) => HeuristicBoneMapper.IsHeuristicBone(boneName)
@@ -405,6 +451,18 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
                     hash = hash * Prime2 + x.GetHashCode();
                 }
                 return hash;
+            }
+        }
+
+        public readonly struct RuntimeBuildContext
+        {
+            public readonly GameObject AvatarObject;
+            public readonly Object Artifact;
+
+            public RuntimeBuildContext(GameObject avatarObject)
+            {
+                AvatarObject = avatarObject;
+                Artifact = AssetGenerator.CreateAssetContainer(useModularAvatarTemporaryFolder: true);
             }
         }
     }

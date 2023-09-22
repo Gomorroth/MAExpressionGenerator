@@ -53,8 +53,11 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
             if (_isCreated)
                 return;
 
+            var context = new Processor.RuntimeBuildContext(avatar);
+
             Processor.GenerateInstallTargets(avatar);
-            Processor.GeneratePresets(avatar);
+            Processor.GenerateSimpleToggle(context);
+            Processor.GeneratePresets(context);
 
             _isCreated = true;
         }

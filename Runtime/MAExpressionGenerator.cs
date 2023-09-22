@@ -9,7 +9,7 @@ using UnityEditor;
 namespace gomoru.su.ModularAvatarExpressionGenerator
 {
     [DisallowMultipleComponent]
-    public sealed class MAExpressionGenerator : MAExpressionBaseComponent
+    public sealed class MAExpressionGenerator : MAExpressionObjectController
     {
         [SerializeField]
         public List<TargetObject> Targets;
@@ -18,7 +18,12 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
         public bool GenerateBoneToggle = true;
 
         [SerializeField]
-        public string ParamterPrefix = "\u200B";
+        public string ParamterPrefix = InitialParameterPrefix;
+
+        public override string DisplayName => gameObject.name;
+
+        public override IEnumerable<TargetObject> GetControlObjects() => Targets;
+        public override string GetParameterPrefix() => ParamterPrefix;
 
 #if UNITY_EDITOR
         protected override void OnUpdate()
@@ -26,7 +31,7 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
             var parent = transform.parent;
             if (parent != null)
             {
-                if (ParamterPrefix == "\u200B")
+                if (ParamterPrefix == InitialParameterPrefix)
                 {
                     ParamterPrefix = parent.name;
                 }
