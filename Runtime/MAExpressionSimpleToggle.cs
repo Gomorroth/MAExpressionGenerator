@@ -9,10 +9,10 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
         public GameObject Target;
 
         [SerializeField]
-        public bool IsSynced;
+        public bool IsSynced = true;
 
         [SerializeField]
-        public bool IsSave;
+        public bool IsSave = true;
 
         public override string DisplayName => GetTargetObject().name;
 
