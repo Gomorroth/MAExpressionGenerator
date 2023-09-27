@@ -12,6 +12,8 @@ using VRC.SDK3.Avatars.Components;
 using VRC.SDK3.Avatars.ScriptableObjects;
 using VRC.SDKBase;
 
+[assembly: ExportsPlugin(typeof(gomoru.su.ModularAvatarExpressionGenerator.MAExpressionGeneratorCore))]
+
 namespace gomoru.su.ModularAvatarExpressionGenerator
 {
     partial class MAExpressionGeneratorCore : Plugin<MAExpressionGeneratorCore>
@@ -23,7 +25,12 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
             InPhase(BuildPhase.Transforming)
             .Run(new GenerateInstallTargetsPass()).Then
             .Run(new GenerateSimpleTogglePass()).Then
-            .Run(new GeneratePresetsPass());
+            .Run(new GeneratePresetsPass()).Then
+            .Run("Finalize MA Expression Generator", context =>
+            {
+                foreach(var x in context.AvatarRootObject.GetComponentsInChildren<MAExpressionBaseComponent>(true))
+                    GameObject.DestroyImmediate(x);
+            });
 
         private sealed class GenerateInstallTargetsPass : Pass<GenerateInstallTargetsPass>
         {
