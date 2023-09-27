@@ -70,27 +70,19 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
             }
         }
 
-        public static Object CreateAssetContainer(string prefix = null, string subDir = null, bool useModularAvatarTemporaryFolder = false)
+        public static Object CreateAssetContainer(string prefix = null, string subDir = null)
         {
-            var container = ScriptableObject.CreateInstance<AssetContainer>();
+            var container = ScriptableObject.CreateInstance<nadena.dev.ndmf.runtime.GeneratedAssets>();
 
-            string path;
-            if (useModularAvatarTemporaryFolder)
+            var guid = EditorPrefs.GetString(ArtifactFolderEditorPrefsKey, null);
+            if (string.IsNullOrEmpty(guid) || string.IsNullOrEmpty(AssetDatabase.GUIDToAssetPath(guid)) || !AssetDatabase.IsValidFolder(AssetDatabase.GUIDToAssetPath(guid)))
             {
-                path = GetGeneratedAssetsFolder();
+                if (!AssetDatabase.IsValidFolder("Assets/MAExpressionGenerator"))
+                    AssetDatabase.CreateFolder("Assets", "MAExpressionGenerator");
+                guid = AssetDatabase.CreateFolder("Assets/MAExpressionGenerator", "Artifact");
+                EditorPrefs.SetString(ArtifactFolderEditorPrefsKey, guid);
             }
-            else
-            {
-                var guid = EditorPrefs.GetString(ArtifactFolderEditorPrefsKey, null);
-                if (string.IsNullOrEmpty(guid) || string.IsNullOrEmpty(AssetDatabase.GUIDToAssetPath(guid)) || !AssetDatabase.IsValidFolder(AssetDatabase.GUIDToAssetPath(guid)))
-                {
-                    if (!AssetDatabase.IsValidFolder("Assets/MAExpressionGenerator"))
-                        AssetDatabase.CreateFolder("Assets", "MAExpressionGenerator");
-                    guid = AssetDatabase.CreateFolder("Assets/MAExpressionGenerator", "Artifact");
-                    EditorPrefs.SetString(ArtifactFolderEditorPrefsKey, guid);
-                }
-                path = AssetDatabase.GUIDToAssetPath(guid);
-            }
+            string path = AssetDatabase.GUIDToAssetPath(guid);
 
             var fileName = $"{prefix}{(string.IsNullOrEmpty(prefix) ? "" : "_")}{GUID.Generate()}.asset";
 
@@ -103,55 +95,6 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
             AssetDatabase.CreateAsset(container, path);
 
             return container;
-        }
-
-        public static AnimatorController CreateArtifact(string prefix = null, bool useModularAvatarTemporaryFolder = false)
-        {
-            var fx = new AnimatorController();
-
-            string path;
-            if (useModularAvatarTemporaryFolder)
-            {
-                path = GetGeneratedAssetsFolder();
-            }
-            else
-            {
-                var guid = EditorPrefs.GetString(ArtifactFolderEditorPrefsKey, null);
-                if (string.IsNullOrEmpty(guid) || string.IsNullOrEmpty(AssetDatabase.GUIDToAssetPath(guid)) || !AssetDatabase.IsValidFolder(AssetDatabase.GUIDToAssetPath(guid)))
-                {
-                    if (!AssetDatabase.IsValidFolder("Assets/MAExpressionGenerator"))
-                        AssetDatabase.CreateFolder("Assets", "MAExpressionGenerator");
-                    guid = AssetDatabase.CreateFolder("Assets/MAExpressionGenerator", "Artifact");
-                    EditorPrefs.SetString(ArtifactFolderEditorPrefsKey, guid);
-                }
-                path = AssetDatabase.GUIDToAssetPath(guid);
-
-            }
-
-
-            AssetDatabase.CreateAsset(fx, Path.Combine(path, $"{prefix}{(string.IsNullOrEmpty(prefix) ? "" : "_")}{GUID.Generate()}.controller"));
-            return fx;
-        }
-
-        // https://github.com/bdunderscore/modular-avatar/blob/b15520271455350cf728bc1b95b874dc30682eb2/Packages/nadena.dev.modular-avatar/Editor/Util.cs#L162C9-L178C10
-        // Originally under MIT License
-        // Copyright (c) 2022 bd_
-        private static string GetGeneratedAssetsFolder()
-        {
-            var path = "Assets/999_Modular_Avatar_Generated";
-
-            var pathParts = path.Split('/');
-
-            for (int i = 1; i < pathParts.Length; i++)
-            {
-                var subPath = string.Join("/", pathParts, 0, i + 1);
-                if (!AssetDatabase.IsValidFolder(subPath))
-                {
-                    AssetDatabase.CreateFolder(string.Join("/", pathParts, 0, i), pathParts[i]);
-                }
-            }
-
-            return path;
         }
     }
 }

@@ -97,7 +97,7 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
 
             if (GUILayout.Button("Run"))
             {
-                Processor.GenerateExpressions(target as MAExpressionGenerator);
+                MAExpressionGeneratorCore.GenerateExpressions(target as MAExpressionGenerator);
             }
         }
     }
