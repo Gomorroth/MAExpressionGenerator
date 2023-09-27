@@ -15,11 +15,11 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
         [SerializeField] 
         public bool Active;
 
-        public TargetObject(GameObject obj, bool enable = true)
+        public TargetObject(GameObject obj, bool enable = true, bool? active = null)
         {
             Object = obj;
             Enable = enable;
-            Active = obj.activeInHierarchy;
+            Active = active ?? obj.activeInHierarchy;
         }
     }
 }
