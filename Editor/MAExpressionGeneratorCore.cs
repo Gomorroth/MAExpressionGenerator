@@ -15,7 +15,7 @@ using Object = UnityEngine.Object;
 
 namespace gomoru.su.ModularAvatarExpressionGenerator
 {
-    public static class Processor
+    public static class MAExpressionGeneratorCore
     {
         public static void GenerateExpressions(MAExpressionGenerator target)
         {
