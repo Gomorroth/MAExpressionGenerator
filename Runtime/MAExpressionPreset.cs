@@ -134,7 +134,7 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
             public Group(MAExpressionObjectController target)
             {
                 Target = target;
-                Targets = new List<TargetObject>(target.GetControlObjects());
+                Targets = new List<TargetObject>(target.GetControlObjects().Select(x => new TargetObject(x.Object, false, false)));
             }
         }
     }
