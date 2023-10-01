@@ -28,9 +28,12 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
                 bool isDirt = false;
                 if (Targets != null && !Equals(generators))
                 {
+                    var count = Targets.Count;
                     Targets.AddRange(generators.Where(x => !Targets.Any(y => x == y.Target)).Select(x => new Group(x)));
-                    Targets.RemoveAll(x => x.Target == null || x.Targets.Any(y => y.Object.IsEditorOnly()));
-                    isDirt = true;
+                    isDirt |= count != Targets.Count;
+                    Debug.Log(isDirt);
+                    Targets.RemoveAll(x => x.Target == null || x.Target.IsEditorOnly());
+                    isDirt |= count != Targets.Count;
                 }
                 foreach (var x in Targets)
                 {
@@ -134,7 +137,10 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
             public Group(MAExpressionObjectController target)
             {
                 Target = target;
-                Targets = new List<TargetObject>(target.GetControlObjects().Select(x => new TargetObject(x.Object, false, false)));
+                var items = target.GetControlObjects();
+                var list = new List<TargetObject>(items.Select(x => new TargetObject(x.Object, false, false)));
+
+                Targets = list;
             }
         }
     }
