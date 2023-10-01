@@ -17,6 +17,8 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
         [SerializeField]
         public bool GenerateBoneToggle = true;
 
+        public bool IncludeChildOnly = true;
+
         [SerializeField]
         public string ParamterPrefix = InitialParameterPrefix;
 
@@ -36,6 +38,10 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
                     ParamterPrefix = parent.name;
                 }
                 var targets = parent.GetComponentsInChildren<SkinnedMeshRenderer>(true);
+                if (IncludeChildOnly)
+                {
+                    targets = targets.Where(x => x.transform.parent == parent).ToArray();
+                }
 
                 if (Targets == null)
                 {
@@ -47,7 +53,7 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
                     var count = Targets.Count;
                     if (count != targets.Count())
                     {
-                        Targets.AddRange(targets.Where(x => !Targets.Any(y => y.Object == x.gameObject)).Select(x => new TargetObject(x.gameObject, !x.IsEditorOnly())));
+                        Targets.AddRange(targets.Where(x => !Targets.Any(y => y.Object == x.gameObject)).Select(x => new TargetObject(x.gameObject)));
                         Targets.RemoveAll(x => x.Object == null || !x.Object.IsIn(parent.gameObject));
                         Targets.Sort((x, y) => x.Object.transform.GetSiblingIndex() - y.Object.transform.GetSiblingIndex());
                         EditorUtility.SetDirty(this);

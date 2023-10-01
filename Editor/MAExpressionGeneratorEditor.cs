@@ -42,32 +42,32 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
 
 
                     EditorGUI.LabelField(enableRect, "Include");
-                    EditorGUI.LabelField(activeRect, "Active");
+                    EditorGUI.LabelField(activeRect, "Enable");
                     EditorGUI.LabelField(targetRect, "Target");
                 },
                 drawElementCallback = (rect, index, isActive, isFocused) =>
                 {
                     var element = _targets.GetArrayElementAtIndex(index);
                     var target = element.FindPropertyRelative(nameof(TargetObject.Object));
+                    var include = element.FindPropertyRelative(nameof(TargetObject.Include));
                     var enable = element.FindPropertyRelative(nameof(TargetObject.Enable));
-                    var active = element.FindPropertyRelative(nameof(TargetObject.Active));
 
                     rect.height = EditorGUIUtility.singleLineHeight;
 
-                    var enableRect = rect;
-                    enableRect.width = rect.height * "Include".Length / 2;
-                    enableRect.x += enableRect.width / 4;
+                    var includeRect = rect;
+                    includeRect.width = rect.height * "Include".Length / 2;
+                    includeRect.x += includeRect.width / 4;
 
-                    var activeRect = rect;
-                    activeRect.width = rect.height * "Active".Length / 2;
-                    activeRect.x += enableRect.width + activeRect.width / 4;
+                    var enableRect = rect;
+                    enableRect.width = rect.height * "Enable".Length / 2;
+                    enableRect.x += includeRect.width + enableRect.width / 4;
 
                     var targetRect = rect;
-                    targetRect.width -= enableRect.width + activeRect.width;
-                    targetRect.x += enableRect.width + activeRect.width;
+                    targetRect.width -= includeRect.width + enableRect.width;
+                    targetRect.x += includeRect.width + enableRect.width;
 
+                    EditorGUI.PropertyField(includeRect, include, GUIContent.none);
                     EditorGUI.PropertyField(enableRect, enable, GUIContent.none);
-                    EditorGUI.PropertyField(activeRect, active, GUIContent.none);
 
                     EditorGUI.BeginDisabledGroup(true);
                     EditorGUI.PropertyField (targetRect, target, GUIContent.none);

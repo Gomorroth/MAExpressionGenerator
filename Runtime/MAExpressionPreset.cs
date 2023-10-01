@@ -31,7 +31,6 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
                     var count = Targets.Count;
                     Targets.AddRange(generators.Where(x => !Targets.Any(y => x == y.Target)).Select(x => new Group(x)));
                     isDirt |= count != Targets.Count;
-                    Debug.Log(isDirt);
                     Targets.RemoveAll(x => x.Target == null || x.Target.IsEditorOnly());
                     isDirt |= count != Targets.Count;
                 }
@@ -138,7 +137,7 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
             {
                 Target = target;
                 var items = target.GetControlObjects();
-                var list = new List<TargetObject>(items.Select(x => new TargetObject(x.Object, false, false)));
+                var list = new List<TargetObject>(items.Select(x => new TargetObject(x.Object, null, false)));
 
                 Targets = list;
             }

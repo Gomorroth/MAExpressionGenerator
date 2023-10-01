@@ -1,5 +1,6 @@
 ﻿using System;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace gomoru.su.ModularAvatarExpressionGenerator
 {
@@ -10,16 +11,17 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
         public GameObject Object;
 
         [SerializeField]
+        public bool Include;
+
+        [SerializeField]
         public bool Enable;
         
-        [SerializeField] 
-        public bool Active;
 
-        public TargetObject(GameObject obj, bool enable = true, bool? active = null)
+        public TargetObject(GameObject obj, bool? enable = null, bool? include = null)
         {
             Object = obj;
-            Enable = enable;
-            Active = active ?? obj.activeInHierarchy;
+            Enable = enable ?? obj.activeInHierarchy;
+            Include = include ?? !obj.IsEditorOnly();
         }
     }
 }
