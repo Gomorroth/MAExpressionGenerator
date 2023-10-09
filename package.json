@@ -1,12 +1,12 @@
 {
   "name": "gomoru.su.modular-avatar-expression-generator",
-  "version": "1.2.0-alpha.0",
+  "version": "1.2.0",
   "displayName": "MA Expression Generator",
   "description": "Generate costume toggle animations",
   "url" : "https://github.com/Gomorroth/MAExpressionGenerator",
   "vpmDependencies" : {
     "com.vrchat.avatars" : "^3.3.0",
-    "nadena.dev.modular-avatar" : "^1.8.0-beta.1",
-    "nadena.dev.ndmf" : "^1.0.2"
+    "nadena.dev.modular-avatar" : "^1.8.0",
+    "nadena.dev.ndmf" : "^1.2.1"
   }
 }
