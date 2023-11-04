@@ -40,7 +40,7 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
             menu.name = "Menu";
             menu.AddTo(container);
 
-            foreach (var item in items)
+            foreach (var item in items.Where(x => x.Enable))
             {
                 var o = item.Object;
                 var parameterName = GetParameterName(target.ParamterPrefix, o);
