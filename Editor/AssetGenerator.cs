@@ -13,10 +13,10 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
     [InitializeOnLoad]
     internal static class AssetGenerator
     {
-        private const string PrefabEditorPrefsKey = "gomoru.su.MAExpressionGenerator.generatedPrefabGUID";
-        private const string PresetPrefabEditorPrefsKey = "gomoru.su.MAExpressionGenerator.PresetPrefabGUID";
-        private const string PresetManagerPrefabEditorPrefsKey = "gomoru.su.MAExpressionGenerator.ManagerPrefabGUID";
-        private const string ArtifactFolderEditorPrefsKey = "gomoru.su.MAExpressionGenerator.ArtifactFolderGUID";
+        private const string PrefabPlayerPrefsKey = "gomoru.su.MAExpressionGenerator.generatedPrefabGUID";
+        private const string PresetPrefabPlayerPrefsKey = "gomoru.su.MAExpressionGenerator.PresetPrefabGUID";
+        private const string PresetManagerPrefabPlayerPrefsKey = "gomoru.su.MAExpressionGenerator.ManagerPrefabGUID";
+        private const string ArtifactFolderPlayerPrefsKey = "gomoru.su.MAExpressionGenerator.ArtifactFolderGUID";
         private const string PrefabPath = "Assets/MAExpressionGenerator/Generator.prefab";
         private const string PresetPrefabPath = "Assets/MAExpressionGenerator/Preset.prefab";
         private const string ManagerPrefabPath = "Assets/MAExpressionGenerator/PresetManager.prefab";
@@ -28,9 +28,9 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
             {
                 bool flag = false;
 
-                flag |= CreatePrefab(PrefabEditorPrefsKey, PrefabPath, x => x.AddComponent<MAExpressionGenerator>());
-                flag |= CreatePrefab(PresetPrefabEditorPrefsKey, PresetPrefabPath, x => x.AddComponent<MAExpressionPreset>());
-                flag |= CreatePrefab(PresetManagerPrefabEditorPrefsKey, ManagerPrefabPath, x =>
+                flag |= CreatePrefab(PrefabPlayerPrefsKey, PrefabPath, x => x.AddComponent<MAExpressionGenerator>());
+                flag |= CreatePrefab(PresetPrefabPlayerPrefsKey, PresetPrefabPath, x => x.AddComponent<MAExpressionPreset>());
+                flag |= CreatePrefab(PresetManagerPrefabPlayerPrefsKey, ManagerPrefabPath, x =>
                 {
                     x.AddComponent<MAExpressionPresetManager>();
                     x.AddComponent<ModularAvatarMenuInstaller>();
@@ -43,7 +43,7 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
 
         private static bool CreatePrefab(string prefsKey, string path, Action<GameObject> initialization)
         {
-            var guid = EditorPrefs.GetString(prefsKey, null);
+            var guid = PlayerPrefs.GetString(prefsKey, null);
             if (string.IsNullOrEmpty(guid) || string.IsNullOrEmpty(AssetDatabase.GUIDToAssetPath(guid)))
             {
                 var directory = Path.GetDirectoryName(path);
@@ -54,7 +54,7 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
 
                 PrefabUtility.SaveAsPrefabAsset(prefab, path);
                 GameObject.DestroyImmediate(prefab);
-                EditorPrefs.SetString(prefsKey, AssetDatabase.AssetPathToGUID(path));
+                PlayerPrefs.SetString(prefsKey, AssetDatabase.AssetPathToGUID(path));
                 return true;
             }
             return false;
@@ -74,13 +74,13 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
         {
             var container = ScriptableObject.CreateInstance<nadena.dev.ndmf.runtime.GeneratedAssets>();
 
-            var guid = EditorPrefs.GetString(ArtifactFolderEditorPrefsKey, null);
+            var guid = PlayerPrefs.GetString(ArtifactFolderPlayerPrefsKey, null);
             if (string.IsNullOrEmpty(guid) || string.IsNullOrEmpty(AssetDatabase.GUIDToAssetPath(guid)) || !AssetDatabase.IsValidFolder(AssetDatabase.GUIDToAssetPath(guid)))
             {
                 if (!AssetDatabase.IsValidFolder("Assets/MAExpressionGenerator"))
                     AssetDatabase.CreateFolder("Assets", "MAExpressionGenerator");
                 guid = AssetDatabase.CreateFolder("Assets/MAExpressionGenerator", "Artifact");
-                EditorPrefs.SetString(ArtifactFolderEditorPrefsKey, guid);
+                PlayerPrefs.SetString(ArtifactFolderPlayerPrefsKey, guid);
             }
             string path = AssetDatabase.GUIDToAssetPath(guid);
 
