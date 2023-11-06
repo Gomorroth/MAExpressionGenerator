@@ -25,11 +25,12 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
             if (avatar != null)
             {
                 var generators = avatar.GetComponentsInChildren<MAExpressionObjectController>();
+                                
                 bool isDirt = false;
                 if (Targets != null && !Equals(generators))
                 {
                     Targets.AddRange(generators.Where(x => !Targets.Any(y => x == y.Target)).Select(x => new Group(x)));
-                    Targets.RemoveAll(x => x.Target == null || x.Targets.Any(y => y.Object.IsEditorOnly()));
+                    Targets.RemoveAll(x => x.Target == null || x.Target.IsEditorOnly());
                     isDirt = true;
                 }
                 foreach (var x in Targets)
@@ -124,8 +125,8 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
                 var targets = Target.GetControlObjects();
                 if (targets.Count() != Targets.Count)
                 {
-                    Targets.AddRange(targets.Where(x => !Targets.Any(y => x.Object == y.Object)).Select(x => new TargetObject(x.Object, false)));
-                    Targets.RemoveAll(x => !targets.Any(y => x.Object == y.Object) || x.Object.IsEditorOnly());
+                    Targets.AddRange(targets.Where(x => x.Enable && !Targets.Any(y => x.Object == y.Object)).Select(x => new TargetObject(x.Object, false)));
+                    Targets.RemoveAll(x => !targets.Where(y => y.Enable).Any(y => x.Object == y.Object) || x.Object.IsEditorOnly());
                     return true;
                 }
                 return false;
@@ -134,7 +135,16 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
             public Group(MAExpressionObjectController target)
             {
                 Target = target;
-                Targets = new List<TargetObject>(target.GetControlObjects().Select(x => new TargetObject(x.Object, false, false)));
+                Targets = new List<TargetObject>(target.GetControlObjects().Where(x => x.Enable).Select(x => new TargetObject(x.Object, false, false)));
+            }
+
+            private sealed class ObjectEqualityComparer : IEqualityComparer<TargetObject>
+            {
+                public static readonly ObjectEqualityComparer Instance = new ObjectEqualityComparer();
+
+                public bool Equals(TargetObject x, TargetObject y) => x.Object == y.Object;
+
+                public int GetHashCode(TargetObject obj) => obj.Object.GetHashCode();
             }
         }
     }

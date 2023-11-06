@@ -172,6 +172,8 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
 
             obj.name = parent.name;
 
+            target.GeneratedTargets = items.Where(x => x.Enable).Select(x => x.Clone()).ToArray();
+
             AssetDatabase.SaveAssets();
         }
 

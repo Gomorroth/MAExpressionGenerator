@@ -15,6 +15,9 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
         public List<TargetObject> Targets;
 
         [SerializeField]
+        public TargetObject[] GeneratedTargets;
+
+        [SerializeField]
         public bool GenerateBoneToggle = true;
 
         [SerializeField]
@@ -22,7 +25,8 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
 
         public override string DisplayName => gameObject.name;
 
-        public override IEnumerable<TargetObject> GetControlObjects() => Targets;
+        public override IEnumerable<TargetObject> GetControlObjects() => GeneratedTargets;
+
         public override string GetParameterPrefix() => ParamterPrefix;
 
 #if UNITY_EDITOR
