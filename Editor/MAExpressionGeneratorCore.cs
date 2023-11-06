@@ -40,6 +40,14 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
             menu.name = "Menu";
             menu.AddTo(container);
 
+            var directBlendTree = new DirectBlendTree(container);
+            directBlendTree.Name = target.DisplayName;
+
+            var costumeGroup = target.GenerateBoneToggle ? directBlendTree.AddDirectBlendTree() : directBlendTree;
+            if (string.IsNullOrEmpty(costumeGroup.Name))
+                costumeGroup.Name = "Costume";
+
+
             foreach (var item in items.Where(x => x.Enable))
             {
                 var o = item.Object;
@@ -59,29 +67,35 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
                         boneList.Add((parameterName, bone));
                     }
                 }
-                var anim = new AnimationClip() { name = $"{o.name} ONOFF" }.AddTo(container);
+
+                var toggle = costumeGroup.AddToggle(parameterName);
+                toggle.Name = o.name;
 
                 var path = o.transform.GetRelativePath(o.GetRoot()?.transform);
-                anim.SetCurve(path, typeof(GameObject), "m_IsActive", AnimationCurve.Linear(0, 0, 1 / 60f, 1));
+                {
+                    var anim = new AnimationClip() { name = $"{toggle.Name} OFF" }.AddTo(container);
+                    anim.SetCurve(path, typeof(GameObject), "m_IsActive", AnimationCurve.Constant(0, 0, 0));
+                    toggle.OFF = anim;
+                }
+                {
+                    var anim = new AnimationClip() { name = $"{toggle.Name} ON" }.AddTo(container);
+                    anim.SetCurve(path, typeof(GameObject), "m_IsActive", AnimationCurve.Constant(0, 0, 1));
+                    toggle.ON = anim;
+                }
 
                 parameter.parameters.Add(new ParameterConfig() { nameOrPrefix = parameterName, syncType = ParameterSyncType.Bool, saved = true, defaultValue = item.Active ? 1 : 0 });
                 fx.AddParameter(new AnimatorControllerParameter() { name = parameterName, defaultFloat = item.Active ? 1 : 0, type = AnimatorControllerParameterType.Float });
-
-                var layer = fx.AddLayer(anim.name, container);
-                var state = layer.stateMachine.AddState("ONOFF", layer.stateMachine.entryPosition + new Vector3(200, 0));
-                state.writeDefaultValues = false;
-                state.motion = anim;
-                state.timeParameterActive = true;
-                state.timeParameter = parameterName;
-
                 menu.controls.Add(new VRCExpressionsMenu.Control() { name = o.name, type = VRCExpressionsMenu.Control.ControlType.Toggle, parameter = new VRCExpressionsMenu.Control.Parameter() { name = parameterName } });
             }
 
             if (target.GenerateBoneToggle)
             {
+                var boneGroupTree = directBlendTree.AddDirectBlendTree();
+                boneGroupTree.Name = "Bone";
                 foreach (var boneGroup in boneList.GroupBy(x => x.Bone).ToLookup(x => x.Select(x2 => x2.Parameter).Distinct(), x => x.Key).GroupBy(x => x.Key, x => x as IEnumerable<GameObject>, new Comparer()).OrderBy(x => x.Key.Count()))
                 {
-                    var name = $"Bone/{string.Join(", ", boneGroup.Key.Select(x => x.Substring(x.LastIndexOf("/") + 1).Replace(" ONOFF", "")))}";
+                    string groupName = string.Join(", ", boneGroup.Key.Select(x => x.Substring(x.LastIndexOf("/") + 1).Replace(" ONOFF", "")));
+                    var name = $"Bone/{groupName}";
                     name = EditorUtils.MakeAnimatorSafeName(name);
 
                     var off = new AnimationClip() { name = $"{name} OFF" }.AddTo(container);
@@ -97,57 +111,17 @@ namespace gomoru.su.ModularAvatarExpressionGenerator
                         }
                     }
 
-                    var layer = new AnimatorControllerLayer()
-                    {
-                        name = name,
-                        defaultWeight = 1,
-                        stateMachine = new AnimatorStateMachine() { name = name }.HideInHierarchy().AddTo(container),
-                    };
-                    var s = layer.stateMachine;
-
-                    var state_off = new AnimatorState()
-                    {
-                        name = "OFF",
-                        writeDefaultValues = false,
-                        motion = off,
-                    }
-                    .HideInHierarchy().AddTo(container);
-
-                    var state_on = new AnimatorState()
-                    {
-                        name = "ON",
-                        writeDefaultValues = false,
-                        motion = on,
-                    }
-                    .HideInHierarchy().AddTo(container);
-
-                    foreach (var x in boneGroup.Key)
-                    {
-                        state_off.AddTransition(new AnimatorStateTransition
-                        {
-                            hideFlags = HideFlags.HideInHierarchy,
-                            hasExitTime = false,
-                            duration = 0,
-                            conditions = new[] { new AnimatorCondition() { parameter = x, mode = AnimatorConditionMode.Greater, threshold = 0.5f } },
-                            destinationState = state_on
-                        }.HideInHierarchy().AddTo(container));
-                    }
-
-                    state_on.AddTransition(new AnimatorStateTransition
-                    {
-                        hideFlags = HideFlags.HideInHierarchy,
-                        hasExitTime = false,
-                        duration = 0,
-                        conditions = boneGroup.Key.Select(x => new AnimatorCondition() { parameter = x, mode = AnimatorConditionMode.Less, threshold = 0.5f }).ToArray(),
-                        destinationState = state_off
-                    }.HideInHierarchy().AddTo(container));
-
-                    s.AddState(state_off, s.entryPosition + new Vector3(200, 0));
-                    s.AddState(state_on, s.entryPosition + new Vector3(200, 100));
-
-                    fx.AddLayer(layer);
+                    var orGate = boneGroupTree.AddLogicORGate();
+                    orGate.Name = groupName;
+                    orGate.OFF = off;
+                    orGate.ON = on;
+                    orGate.Parameters = boneGroup.Key.ToArray();
                 }
             }
+
+            fx.AddLayer(directBlendTree.ToAnimatorControllerLayer());
+            fx.AddParameter(new AnimatorControllerParameter() { name = "1", type = AnimatorControllerParameterType.Float, defaultFloat = 1 });
+
 
             obj.GetOrAddComponent<ModularAvatarMenuInstaller>(x =>
             {
