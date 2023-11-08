@@ -18,6 +18,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+        with: 
+          submodule: recursive
 
       - name: Get packageName
         id: packageName
